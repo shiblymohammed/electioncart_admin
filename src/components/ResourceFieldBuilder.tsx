@@ -1,5 +1,9 @@
 import { useState, useEffect } from 'react';
+import { DndContext, closestCenter, DragEndEvent, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
+import { SortableContext, verticalListSortingStrategy, useSortable } from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 import { ResourceFieldDefinition } from '../types/product';
+import { useToast } from '../hooks/useToast';
 import {
   getResourceFields,
   createResourceField,
@@ -13,13 +17,119 @@ interface ResourceFieldBuilderProps {
   productId: number;
 }
 
+// Sortable Field Item Component
+interface SortableFieldItemProps {
+  field: ResourceFieldDefinition;
+  onEdit: (field: ResourceFieldDefinition) => void;
+  onDelete: (fieldId: number) => void;
+}
+
+function SortableFieldItem({ field, onEdit, onDelete }: SortableFieldItemProps) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id: field.id.toString(),
+  });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  };
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className="bg-dark-hover border border-dark-border rounded-lg p-4 mb-3"
+    >
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3 flex-1">
+          {/* Drag Handle */}
+          <div
+            {...attributes}
+            {...listeners}
+            className="cursor-grab active:cursor-grabbing p-1 text-text-muted hover:text-text"
+          >
+            <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+              <path d="M7 2a2 2 0 1 0 0 4 2 2 0 0 0 0-4zM7 8a2 2 0 1 0 0 4 2 2 0 0 0 0-4zM7 14a2 2 0 1 0 0 4 2 2 0 0 0 0-4zM13 2a2 2 0 1 0 0 4 2 2 0 0 0 0-4zM13 8a2 2 0 1 0 0 4 2 2 0 0 0 0-4zM13 14a2 2 0 1 0 0 4 2 2 0 0 0 0-4z" />
+            </svg>
+          </div>
+
+          <div className="flex-1">
+            <div className="flex items-center gap-2">
+              <h4 className="font-medium text-text">{field.field_name}</h4>
+              <span
+                className={`px-2 py-0.5 text-xs font-medium rounded-full ${
+                  field.field_type === 'image'
+                    ? 'bg-purple-500/20 text-purple-400'
+                    : field.field_type === 'document'
+                    ? 'bg-primary/20 text-primary'
+                    : field.field_type === 'number'
+                    ? 'bg-success/20 text-success'
+                    : 'bg-dark-border text-text-muted'
+                }`}
+              >
+                {field.field_type}
+              </span>
+              {field.is_required && (
+                <span className="text-xs text-danger font-medium">Required</span>
+              )}
+            </div>
+            {field.help_text && (
+              <p className="text-sm text-text-muted mt-1">{field.help_text}</p>
+            )}
+            <div className="text-xs text-text-muted mt-2 flex flex-wrap gap-3">
+              {field.max_file_size_mb && (
+                <span>Max size: {field.max_file_size_mb}MB</span>
+              )}
+              {field.max_length && <span>Max length: {field.max_length}</span>}
+              {field.min_value !== null && field.min_value !== undefined && (
+                <span>Min: {field.min_value}</span>
+              )}
+              {field.max_value !== null && field.max_value !== undefined && (
+                <span>Max: {field.max_value}</span>
+              )}
+              {field.allowed_extensions && field.allowed_extensions.length > 0 && (
+                <span>Allowed: {field.allowed_extensions.join(', ')}</span>
+              )}
+            </div>
+          </div>
+        </div>
+
+        <div className="flex gap-2">
+          <button
+            onClick={() => onEdit(field)}
+            className="text-primary hover:text-primary/80 text-sm transition-colors"
+          >
+            Edit
+          </button>
+          <button
+            onClick={() => onDelete(field.id)}
+            className="text-danger hover:text-danger/80 text-sm transition-colors"
+          >
+            Delete
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 const ResourceFieldBuilder = ({ productType, productId }: ResourceFieldBuilderProps) => {
+  const { showSuccess, showError: showErrorToast } = useToast();
   const [fields, setFields] = useState<ResourceFieldDefinition[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [editingField, setEditingField] = useState<ResourceFieldDefinition | null>(null);
-  const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
+  const [reordering, setReordering] = useState(false);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8,
+      },
+    })
+  );
 
   useEffect(() => {
     fetchFields();
@@ -38,33 +148,40 @@ const ResourceFieldBuilder = ({ productType, productId }: ResourceFieldBuilderPr
     }
   };
 
-  const handleDragStart = (index: number) => {
-    setDraggedIndex(index);
-  };
+  const handleDragEnd = async (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
 
-  const handleDragOver = (e: React.DragEvent, index: number) => {
-    e.preventDefault();
-    if (draggedIndex === null || draggedIndex === index) return;
+    const oldIndex = fields.findIndex(field => field.id.toString() === active.id);
+    const newIndex = fields.findIndex(field => field.id.toString() === over.id);
 
+    if (oldIndex === -1 || newIndex === -1) return;
+
+    // Optimistically update UI
     const newFields = [...fields];
-    const draggedField = newFields[draggedIndex];
-    newFields.splice(draggedIndex, 1);
-    newFields.splice(index, 0, draggedField);
-
+    const [movedField] = newFields.splice(oldIndex, 1);
+    newFields.splice(newIndex, 0, movedField);
     setFields(newFields);
-    setDraggedIndex(index);
-  };
-
-  const handleDragEnd = async () => {
-    if (draggedIndex === null) return;
 
     try {
-      const fieldIds = fields.map((f) => f.id);
+      setReordering(true);
+      const fieldIds = newFields.map(field => field.id);
       await reorderResourceFields(fieldIds);
-      setDraggedIndex(null);
+      showSuccess('Fields reordered successfully');
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Failed to reorder fields');
-      fetchFields(); // Reload to reset order
+      console.error('Reorder error:', err);
+      // Check if it's a 400 or 404 error (endpoint not implemented)
+      if (err.response?.status === 400 || err.response?.status === 404) {
+        showErrorToast('Reorder feature not yet implemented in backend. Order saved locally only.');
+        // Keep the new order in UI even though backend doesn't support it yet
+      } else {
+        const errorMsg = err.response?.data?.message || 'Failed to reorder fields';
+        showErrorToast(errorMsg);
+        // Revert on other failures
+        await fetchFields();
+      }
+    } finally {
+      setReordering(false);
     }
   };
 
@@ -74,12 +191,13 @@ const ResourceFieldBuilder = ({ productType, productId }: ResourceFieldBuilderPr
     try {
       await deleteResourceField(fieldId);
       await fetchFields();
+      showSuccess('Field deleted successfully');
       setError(''); // Clear any previous errors
     } catch (err: any) {
       console.error('Delete error:', err);
       const errorMessage = err.response?.data?.message || err.response?.data?.error || err.message || 'Failed to delete field';
       setError(errorMessage);
-      alert(`Error: ${errorMessage}`);
+      showErrorToast(errorMessage);
     }
   };
 
@@ -101,105 +219,61 @@ const ResourceFieldBuilder = ({ productType, productId }: ResourceFieldBuilderPr
   if (loading) {
     return (
       <div className="text-center py-8">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
-        <p className="mt-2 text-gray-600">Loading fields...</p>
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
+        <p className="mt-2 text-text-muted">Loading fields...</p>
       </div>
     );
   }
 
   return (
-    <div className="bg-white rounded-lg shadow-sm p-6">
+    <div className="bg-dark-surface border border-dark-border rounded-lg shadow-sm p-6">
       <div className="flex justify-between items-center mb-4">
-        <h3 className="text-lg font-semibold text-gray-900">Resource Fields</h3>
+        <h3 className="text-lg font-semibold text-text">Resource Fields</h3>
         <button
           onClick={() => setShowForm(true)}
-          className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm"
+          className="px-4 py-2 bg-primary text-primary-content rounded-lg hover:bg-primary/90 text-sm shadow-glow-primary"
         >
           + Add Field
         </button>
       </div>
 
       {error && (
-        <div className="mb-4 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
+        <div className="mb-4 bg-danger/20 border border-danger rounded-lg text-danger px-4 py-3 text-sm">
           {error}
         </div>
       )}
 
       {fields.length === 0 ? (
-        <p className="text-gray-500 text-center py-8">
+        <p className="text-text-muted text-center py-8">
           No resource fields configured. Add fields to collect information from users.
         </p>
       ) : (
-        <div className="space-y-2">
-          {fields.map((field, index) => (
-            <div
-              key={field.id}
-              draggable
-              onDragStart={() => handleDragStart(index)}
-              onDragOver={(e) => handleDragOver(e, index)}
-              onDragEnd={handleDragEnd}
-              className={`border border-gray-200 rounded-lg p-4 cursor-move hover:bg-gray-50 ${
-                draggedIndex === index ? 'opacity-50' : ''
-              }`}
-            >
-              <div className="flex items-start justify-between">
-                <div className="flex-1">
-                  <div className="flex items-center space-x-2">
-                    <span className="text-gray-400">☰</span>
-                    <h4 className="font-medium text-gray-900">{field.field_name}</h4>
-                    <span
-                      className={`px-2 py-1 text-xs font-medium rounded-full ${
-                        field.field_type === 'image'
-                          ? 'bg-purple-100 text-purple-800'
-                          : field.field_type === 'document'
-                          ? 'bg-blue-100 text-blue-800'
-                          : field.field_type === 'number'
-                          ? 'bg-green-100 text-green-800'
-                          : 'bg-gray-100 text-gray-800'
-                      }`}
-                    >
-                      {field.field_type}
-                    </span>
-                    {field.is_required && (
-                      <span className="text-xs text-red-600 font-medium">Required</span>
-                    )}
-                  </div>
-                  {field.help_text && (
-                    <p className="text-sm text-gray-600 mt-1 ml-6">{field.help_text}</p>
-                  )}
-                  <div className="text-xs text-gray-500 mt-2 ml-6 space-x-4">
-                    {field.max_file_size_mb && (
-                      <span>Max size: {field.max_file_size_mb}MB</span>
-                    )}
-                    {field.max_length && <span>Max length: {field.max_length}</span>}
-                    {field.min_value !== null && field.min_value !== undefined && (
-                      <span>Min: {field.min_value}</span>
-                    )}
-                    {field.max_value !== null && field.max_value !== undefined && (
-                      <span>Max: {field.max_value}</span>
-                    )}
-                    {field.allowed_extensions && field.allowed_extensions.length > 0 && (
-                      <span>Allowed: {field.allowed_extensions.join(', ')}</span>
-                    )}
-                  </div>
-                </div>
-                <div className="flex space-x-2 ml-4">
-                  <button
-                    onClick={() => handleEdit(field)}
-                    className="text-blue-600 hover:text-blue-800 text-sm"
-                  >
-                    Edit
-                  </button>
-                  <button
-                    onClick={() => handleDelete(field.id)}
-                    className="text-red-600 hover:text-red-800 text-sm"
-                  >
-                    Delete
-                  </button>
-                </div>
-              </div>
+        <DndContext
+          sensors={sensors}
+          collisionDetection={closestCenter}
+          onDragEnd={handleDragEnd}
+        >
+          <SortableContext items={fields.map(f => f.id.toString())} strategy={verticalListSortingStrategy}>
+            <div className="space-y-3">
+              {fields.map((field) => (
+                <SortableFieldItem
+                  key={field.id}
+                  field={field}
+                  onEdit={handleEdit}
+                  onDelete={handleDelete}
+                />
+              ))}
             </div>
-          ))}
+          </SortableContext>
+        </DndContext>
+      )}
+
+      {reordering && (
+        <div className="mt-4 text-center">
+          <div className="inline-flex items-center gap-2 text-primary">
+            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary"></div>
+            <span className="text-sm">Reordering fields...</span>
+          </div>
         </div>
       )}
 
@@ -308,17 +382,17 @@ const ResourceFieldForm = ({
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg shadow-xl max-w-lg w-full mx-4">
-        <div className="px-6 py-4 border-b border-gray-200">
-          <h3 className="text-lg font-semibold text-gray-900">
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 animate-fade-in">
+      <div className="bg-dark-surface border border-dark-border rounded-xl shadow-2xl max-w-lg w-full mx-4 animate-fade-in-up">
+        <div className="px-6 py-4 border-b border-dark-border">
+          <h3 className="text-lg font-semibold text-text">
             {field ? 'Edit Resource Field' : 'Add Resource Field'}
           </h3>
         </div>
 
-        <form onSubmit={handleSubmit} className="px-6 py-4 max-h-[calc(100vh-200px)] overflow-y-auto">
+        <form onSubmit={handleSubmit} className="px-6 py-4 max-h-[calc(100vh-200px)] overflow-y-auto custom-scrollbar">
           {error && (
-            <div className="mb-4 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
+            <div className="mb-4 bg-danger/20 border border-danger text-danger px-4 py-3 rounded-lg text-sm">
               {error}
             </div>
           )}
@@ -326,27 +400,27 @@ const ResourceFieldForm = ({
           <div className="space-y-4">
             {/* Field Name */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Field Name <span className="text-red-500">*</span>
+              <label className="block text-sm font-medium text-text mb-1">
+                Field Name <span className="text-danger">*</span>
               </label>
               <input
                 type="text"
                 value={formData.field_name}
                 onChange={(e) => setFormData({ ...formData, field_name: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full px-3 py-2 bg-dark-hover border border-dark-border rounded-lg text-text placeholder-text-muted focus:outline-none focus:ring-2 focus:ring-primary/50"
                 required
               />
             </div>
 
             {/* Field Type */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Field Type <span className="text-red-500">*</span>
+              <label className="block text-sm font-medium text-text mb-1">
+                Field Type <span className="text-danger">*</span>
               </label>
               <select
                 value={formData.field_type}
                 onChange={(e) => setFormData({ ...formData, field_type: e.target.value as any })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full px-3 py-2 bg-dark-hover border border-dark-border rounded-lg text-text focus:outline-none focus:ring-2 focus:ring-primary/50"
                 disabled={!!field}
               >
                 <option value="text">Text</option>
@@ -365,29 +439,29 @@ const ResourceFieldForm = ({
                 id="is_required"
                 checked={formData.is_required}
                 onChange={(e) => setFormData({ ...formData, is_required: e.target.checked })}
-                className="mr-2"
+                className="w-4 h-4 rounded border-dark-border bg-dark-hover text-primary focus:ring-2 focus:ring-primary/50 mr-2"
               />
-              <label htmlFor="is_required" className="text-sm text-gray-700">
+              <label htmlFor="is_required" className="text-sm text-text">
                 Required field
               </label>
             </div>
 
             {/* Help Text */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Help Text</label>
+              <label className="block text-sm font-medium text-text mb-1">Help Text</label>
               <input
                 type="text"
                 value={formData.help_text}
                 onChange={(e) => setFormData({ ...formData, help_text: e.target.value })}
                 placeholder="Instructions for users"
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full px-3 py-2 bg-dark-hover border border-dark-border rounded-lg text-text placeholder-text-muted focus:outline-none focus:ring-2 focus:ring-primary/50"
               />
             </div>
 
             {/* Type-specific fields */}
             {(formData.field_type === 'image' || formData.field_type === 'document') && (
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-text mb-1">
                   Max File Size (MB)
                 </label>
                 <input
@@ -398,14 +472,14 @@ const ResourceFieldForm = ({
                   }
                   min="1"
                   max="50"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-3 py-2 bg-dark-hover border border-dark-border rounded-lg text-text focus:outline-none focus:ring-2 focus:ring-primary/50"
                 />
               </div>
             )}
 
             {formData.field_type === 'document' && (
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-text mb-1">
                   Allowed Extensions (comma-separated)
                 </label>
                 <input
@@ -413,14 +487,14 @@ const ResourceFieldForm = ({
                   value={formData.allowed_extensions}
                   onChange={(e) => setFormData({ ...formData, allowed_extensions: e.target.value })}
                   placeholder="pdf, docx, doc"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-3 py-2 bg-dark-hover border border-dark-border rounded-lg text-text placeholder-text-muted focus:outline-none focus:ring-2 focus:ring-primary/50"
                 />
               </div>
             )}
 
             {formData.field_type === 'text' && (
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-text mb-1">
                   Max Length
                 </label>
                 <input
@@ -431,7 +505,7 @@ const ResourceFieldForm = ({
                   }
                   min="1"
                   max="5000"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-3 py-2 bg-dark-hover border border-dark-border rounded-lg text-text focus:outline-none focus:ring-2 focus:ring-primary/50"
                 />
               </div>
             )}
@@ -439,7 +513,7 @@ const ResourceFieldForm = ({
             {formData.field_type === 'number' && (
               <>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-text mb-1">
                     Min Value
                   </label>
                   <input
@@ -448,11 +522,11 @@ const ResourceFieldForm = ({
                     onChange={(e) =>
                       setFormData({ ...formData, min_value: parseInt(e.target.value) })
                     }
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full px-3 py-2 bg-dark-hover border border-dark-border rounded-lg text-text focus:outline-none focus:ring-2 focus:ring-primary/50"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-text mb-1">
                     Max Value
                   </label>
                   <input
@@ -461,7 +535,7 @@ const ResourceFieldForm = ({
                     onChange={(e) =>
                       setFormData({ ...formData, max_value: parseInt(e.target.value) })
                     }
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full px-3 py-2 bg-dark-hover border border-dark-border rounded-lg text-text focus:outline-none focus:ring-2 focus:ring-primary/50"
                   />
                 </div>
               </>
@@ -469,11 +543,11 @@ const ResourceFieldForm = ({
           </div>
         </form>
 
-        <div className="px-6 py-4 border-t border-gray-200 flex justify-end space-x-3">
+        <div className="px-6 py-4 border-t border-dark-border flex justify-end space-x-3">
           <button
             type="button"
             onClick={onClose}
-            className="px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50"
+            className="px-4 py-2 text-text bg-dark-hover border border-dark-border rounded-lg hover:bg-dark-border transition-colors"
             disabled={loading}
           >
             Cancel
@@ -481,9 +555,12 @@ const ResourceFieldForm = ({
           <button
             onClick={handleSubmit}
             disabled={loading}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-blue-400"
+            className="px-4 py-2 bg-primary text-primary-content rounded-lg hover:bg-primary/90 disabled:opacity-50 transition-colors shadow-glow-primary flex items-center gap-2"
           >
-            {loading ? 'Saving...' : field ? 'Update Field' : 'Add Field'}
+            {loading && (
+              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+            )}
+            <span>{loading ? 'Saving...' : field ? 'Update Field' : 'Add Field'}</span>
           </button>
         </div>
       </div>

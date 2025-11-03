@@ -1,5 +1,9 @@
 import { useState, useEffect } from 'react';
+import { DndContext, closestCenter, DragEndEvent, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
+import { SortableContext, verticalListSortingStrategy, useSortable } from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 import { ChecklistTemplateItem } from '../types/product';
+import { useToast } from '../hooks/useToast';
 import {
   getChecklistTemplate,
   createChecklistItem,
@@ -13,13 +17,96 @@ interface ChecklistTemplateBuilderProps {
   productId: number;
 }
 
+// Sortable Checklist Item Component
+interface SortableChecklistItemProps {
+  item: ChecklistTemplateItem;
+  onEdit: (item: ChecklistTemplateItem) => void;
+  onDelete: (itemId: number) => void;
+}
+
+function SortableChecklistItem({ item, onEdit, onDelete }: SortableChecklistItemProps) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id: item.id.toString(),
+  });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  };
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className="bg-dark-hover border border-dark-border rounded-lg p-4 mb-3"
+    >
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3 flex-1">
+          {/* Drag Handle */}
+          <div
+            {...attributes}
+            {...listeners}
+            className="cursor-grab active:cursor-grabbing p-1 text-text-muted hover:text-text"
+          >
+            <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+              <path d="M7 2a2 2 0 1 0 0 4 2 2 0 0 0 0-4zM7 8a2 2 0 1 0 0 4 2 2 0 0 0 0-4zM7 14a2 2 0 1 0 0 4 2 2 0 0 0 0-4zM13 2a2 2 0 1 0 0 4 2 2 0 0 0 0-4zM13 8a2 2 0 1 0 0 4 2 2 0 0 0 0-4zM13 14a2 2 0 1 0 0 4 2 2 0 0 0 0-4z" />
+            </svg>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <input
+              type="checkbox"
+              disabled
+              className="w-4 h-4 rounded border-dark-border bg-dark-surface"
+            />
+            <div className="flex-1">
+              <h4 className="font-medium text-text">{item.name}</h4>
+              {item.description && (
+                <p className="text-sm text-text-muted mt-1">{item.description}</p>
+              )}
+              {item.is_optional && (
+                <span className="text-xs text-warning mt-1 inline-block">(Optional)</span>
+              )}
+            </div>
+          </div>
+        </div>
+
+        <div className="flex gap-2">
+          <button
+            onClick={() => onEdit(item)}
+            className="text-primary hover:text-primary/80 text-sm transition-colors"
+          >
+            Edit
+          </button>
+          <button
+            onClick={() => onDelete(item.id)}
+            className="text-danger hover:text-danger/80 text-sm transition-colors"
+          >
+            Delete
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 const ChecklistTemplateBuilder = ({ productType, productId }: ChecklistTemplateBuilderProps) => {
+  const { showSuccess, showError: showErrorToast } = useToast();
   const [items, setItems] = useState<ChecklistTemplateItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [editingItem, setEditingItem] = useState<ChecklistTemplateItem | null>(null);
-  const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
+  const [reordering, setReordering] = useState(false);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8,
+      },
+    })
+  );
 
   useEffect(() => {
     fetchItems();
@@ -38,33 +125,40 @@ const ChecklistTemplateBuilder = ({ productType, productId }: ChecklistTemplateB
     }
   };
 
-  const handleDragStart = (index: number) => {
-    setDraggedIndex(index);
-  };
+  const handleDragEnd = async (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
 
-  const handleDragOver = (e: React.DragEvent, index: number) => {
-    e.preventDefault();
-    if (draggedIndex === null || draggedIndex === index) return;
+    const oldIndex = items.findIndex(item => item.id.toString() === active.id);
+    const newIndex = items.findIndex(item => item.id.toString() === over.id);
 
+    if (oldIndex === -1 || newIndex === -1) return;
+
+    // Optimistically update UI
     const newItems = [...items];
-    const draggedItem = newItems[draggedIndex];
-    newItems.splice(draggedIndex, 1);
-    newItems.splice(index, 0, draggedItem);
-
+    const [movedItem] = newItems.splice(oldIndex, 1);
+    newItems.splice(newIndex, 0, movedItem);
     setItems(newItems);
-    setDraggedIndex(index);
-  };
-
-  const handleDragEnd = async () => {
-    if (draggedIndex === null) return;
 
     try {
-      const itemIds = items.map((item) => item.id);
+      setReordering(true);
+      const itemIds = newItems.map(item => item.id);
       await reorderChecklistItems(itemIds);
-      setDraggedIndex(null);
+      showSuccess('Checklist items reordered successfully');
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Failed to reorder items');
-      fetchItems(); // Reload to reset order
+      console.error('Reorder error:', err);
+      // Check if it's a 400 or 404 error (endpoint not implemented)
+      if (err.response?.status === 400 || err.response?.status === 404) {
+        showErrorToast('Reorder feature not yet implemented in backend. Order saved locally only.');
+        // Keep the new order in UI even though backend doesn't support it yet
+      } else {
+        const errorMsg = err.response?.data?.message || 'Failed to reorder items';
+        showErrorToast(errorMsg);
+        // Revert on other failures
+        await fetchItems();
+      }
+    } finally {
+      setReordering(false);
     }
   };
 
@@ -74,8 +168,11 @@ const ChecklistTemplateBuilder = ({ productType, productId }: ChecklistTemplateB
     try {
       await deleteChecklistItem(itemId);
       await fetchItems();
+      showSuccess('Checklist item deleted successfully');
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Failed to delete item');
+      const errorMsg = err.response?.data?.message || 'Failed to delete item';
+      setError(errorMsg);
+      showErrorToast(errorMsg);
     }
   };
 
@@ -97,82 +194,61 @@ const ChecklistTemplateBuilder = ({ productType, productId }: ChecklistTemplateB
   if (loading) {
     return (
       <div className="text-center py-8">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
-        <p className="mt-2 text-gray-600">Loading checklist...</p>
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
+        <p className="mt-2 text-text-muted">Loading checklist...</p>
       </div>
     );
   }
 
   return (
-    <div className="bg-white rounded-lg shadow-sm p-6">
+    <div className="bg-dark-surface border border-dark-border rounded-lg shadow-sm p-6">
       <div className="flex justify-between items-center mb-4">
-        <h3 className="text-lg font-semibold text-gray-900">Checklist Template</h3>
+        <h3 className="text-lg font-semibold text-text">Checklist Template</h3>
         <button
           onClick={() => setShowForm(true)}
-          className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm"
+          className="px-4 py-2 bg-primary text-primary-content rounded-lg hover:bg-primary/90 text-sm shadow-glow-primary"
         >
           + Add Item
         </button>
       </div>
 
       {error && (
-        <div className="mb-4 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
+        <div className="mb-4 bg-danger/20 border border-danger rounded-lg text-danger px-4 py-3 text-sm">
           {error}
         </div>
       )}
 
       {items.length === 0 ? (
-        <p className="text-gray-500 text-center py-8">
+        <p className="text-text-muted text-center py-8">
           No checklist items configured. Add items to define the workflow for this product.
         </p>
       ) : (
-        <div className="space-y-2">
-          {items.map((item, index) => (
-            <div
-              key={item.id}
-              draggable
-              onDragStart={() => handleDragStart(index)}
-              onDragOver={(e) => handleDragOver(e, index)}
-              onDragEnd={handleDragEnd}
-              className={`border border-gray-200 rounded-lg p-4 cursor-move hover:bg-gray-50 ${
-                draggedIndex === index ? 'opacity-50' : ''
-              }`}
-            >
-              <div className="flex items-start justify-between">
-                <div className="flex-1">
-                  <div className="flex items-center space-x-2">
-                    <span className="text-gray-400">☰</span>
-                    <h4 className="font-medium text-gray-900">{item.name}</h4>
-                    {item.is_optional && (
-                      <span className="px-2 py-1 text-xs font-medium rounded-full bg-gray-100 text-gray-600">
-                        Optional
-                      </span>
-                    )}
-                    {item.estimated_duration_minutes && (
-                      <span className="text-xs text-gray-500">
-                        ~{item.estimated_duration_minutes} min
-                      </span>
-                    )}
-                  </div>
-                  <p className="text-sm text-gray-600 mt-1 ml-6">{item.description}</p>
-                </div>
-                <div className="flex space-x-2 ml-4">
-                  <button
-                    onClick={() => handleEdit(item)}
-                    className="text-blue-600 hover:text-blue-800 text-sm"
-                  >
-                    Edit
-                  </button>
-                  <button
-                    onClick={() => handleDelete(item.id)}
-                    className="text-red-600 hover:text-red-800 text-sm"
-                  >
-                    Delete
-                  </button>
-                </div>
-              </div>
+        <DndContext
+          sensors={sensors}
+          collisionDetection={closestCenter}
+          onDragEnd={handleDragEnd}
+        >
+          <SortableContext items={items.map(i => i.id.toString())} strategy={verticalListSortingStrategy}>
+            <div className="space-y-3">
+              {items.map((item) => (
+                <SortableChecklistItem
+                  key={item.id}
+                  item={item}
+                  onEdit={handleEdit}
+                  onDelete={handleDelete}
+                />
+              ))}
             </div>
-          ))}
+          </SortableContext>
+        </DndContext>
+      )}
+
+      {reordering && (
+        <div className="mt-4 text-center">
+          <div className="inline-flex items-center gap-2 text-primary">
+            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary"></div>
+            <span className="text-sm">Reordering items...</span>
+          </div>
         </div>
       )}
 
@@ -254,17 +330,17 @@ const ChecklistItemForm = ({
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg shadow-xl max-w-lg w-full mx-4">
-        <div className="px-6 py-4 border-b border-gray-200">
-          <h3 className="text-lg font-semibold text-gray-900">
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 animate-fade-in">
+      <div className="bg-dark-surface border border-dark-border rounded-xl shadow-2xl max-w-lg w-full mx-4 animate-fade-in-up">
+        <div className="px-6 py-4 border-b border-dark-border">
+          <h3 className="text-lg font-semibold text-text">
             {item ? 'Edit Checklist Item' : 'Add Checklist Item'}
           </h3>
         </div>
 
-        <form onSubmit={handleSubmit} className="px-6 py-4">
+        <form onSubmit={handleSubmit} className="px-6 py-4 custom-scrollbar">
           {error && (
-            <div className="mb-4 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
+            <div className="mb-4 bg-danger/20 border border-danger text-danger px-4 py-3 rounded-lg text-sm">
               {error}
             </div>
           )}
@@ -272,30 +348,30 @@ const ChecklistItemForm = ({
           <div className="space-y-4">
             {/* Item Name */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Item Name <span className="text-red-500">*</span>
+              <label className="block text-sm font-medium text-text mb-1">
+                Item Name <span className="text-danger">*</span>
               </label>
               <input
                 type="text"
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                 placeholder="e.g., Review campaign materials"
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full px-3 py-2 bg-dark-hover border border-dark-border rounded-lg text-text placeholder-text-muted focus:outline-none focus:ring-2 focus:ring-primary/50"
                 required
               />
             </div>
 
             {/* Description */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Description <span className="text-red-500">*</span>
+              <label className="block text-sm font-medium text-text mb-1">
+                Description <span className="text-danger">*</span>
               </label>
               <textarea
                 value={formData.description}
                 onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                 placeholder="Detailed instructions for this task"
                 rows={3}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full px-3 py-2 bg-dark-hover border border-dark-border rounded-lg text-text placeholder-text-muted focus:outline-none focus:ring-2 focus:ring-primary/50"
                 required
               />
             </div>
@@ -307,16 +383,16 @@ const ChecklistItemForm = ({
                 id="is_optional"
                 checked={formData.is_optional}
                 onChange={(e) => setFormData({ ...formData, is_optional: e.target.checked })}
-                className="mr-2"
+                className="w-4 h-4 rounded border-dark-border bg-dark-hover text-primary focus:ring-2 focus:ring-primary/50 mr-2"
               />
-              <label htmlFor="is_optional" className="text-sm text-gray-700">
+              <label htmlFor="is_optional" className="text-sm text-text">
                 Optional item (does not affect completion percentage)
               </label>
             </div>
 
             {/* Estimated Duration */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-text mb-1">
                 Estimated Duration (minutes)
               </label>
               <input
@@ -330,17 +406,17 @@ const ChecklistItemForm = ({
                 }
                 min="1"
                 placeholder="Optional"
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full px-3 py-2 bg-dark-hover border border-dark-border rounded-lg text-text placeholder-text-muted focus:outline-none focus:ring-2 focus:ring-primary/50"
               />
             </div>
           </div>
         </form>
 
-        <div className="px-6 py-4 border-t border-gray-200 flex justify-end space-x-3">
+        <div className="px-6 py-4 border-t border-dark-border flex justify-end space-x-3">
           <button
             type="button"
             onClick={onClose}
-            className="px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50"
+            className="px-4 py-2 text-text bg-dark-hover border border-dark-border rounded-lg hover:bg-dark-border transition-colors"
             disabled={loading}
           >
             Cancel
@@ -348,9 +424,12 @@ const ChecklistItemForm = ({
           <button
             onClick={handleSubmit}
             disabled={loading}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-blue-400"
+            className="px-4 py-2 bg-primary text-primary-content rounded-lg hover:bg-primary/90 disabled:opacity-50 transition-colors shadow-glow-primary flex items-center gap-2"
           >
-            {loading ? 'Saving...' : item ? 'Update Item' : 'Add Item'}
+            {loading && (
+              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+            )}
+            <span>{loading ? 'Saving...' : item ? 'Update Item' : 'Add Item'}</span>
           </button>
         </div>
       </div>

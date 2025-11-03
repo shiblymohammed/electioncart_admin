@@ -12,14 +12,16 @@ import Badge from '../components/ui/Badge';
 import LoadingSpinner from '../components/ui/LoadingSpinner';
 import Button from '../components/ui/Button';
 import { formatDate, formatCurrency, formatStatus } from '../utils/formatters';
+import { downloadInvoice } from '../services/invoiceService';
 
 const OrderDetailPage = () => {
   const { id } = useParams<{ id: string }>();
   const { user } = useAuth();
   const navigate = useNavigate();
-  const { showError } = useToast();
+  const { showError, showSuccess } = useToast();
   const [order, setOrder] = useState<OrderDetailType | null>(null);
   const [loading, setLoading] = useState(true);
+  const [downloadingInvoice, setDownloadingInvoice] = useState(false);
 
   useEffect(() => {
     if (id) {
@@ -39,6 +41,20 @@ const OrderDetailPage = () => {
       showError(err.response?.data?.error?.message || 'Failed to load order details');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleDownloadInvoice = async () => {
+    if (!order) return;
+    
+    try {
+      setDownloadingInvoice(true);
+      await downloadInvoice(order.id);
+      showSuccess('Invoice downloaded successfully');
+    } catch (err: any) {
+      showError(err.message || 'Failed to download invoice');
+    } finally {
+      setDownloadingInvoice(false);
     }
   };
 
@@ -90,6 +106,13 @@ const OrderDetailPage = () => {
           <div className="flex gap-2">
             <Button variant="ghost" onClick={() => navigate('/orders')}>
               Back to Orders
+            </Button>
+            <Button 
+              variant="secondary" 
+              onClick={handleDownloadInvoice}
+              isLoading={downloadingInvoice}
+            >
+              {downloadingInvoice ? 'Downloading...' : 'Download Invoice'}
             </Button>
             {user?.role === 'admin' && !order.assigned_to && (
               <Button variant="primary" onClick={() => navigate(`/orders/${order.id}/assign`)}>

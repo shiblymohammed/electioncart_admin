@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { useToast } from '../hooks/useToast';
 import AppLayout from '../components/layout/AppLayout';
 import PageHeader from '../components/layout/PageHeader';
@@ -13,12 +14,15 @@ interface AnalyticsData {
   total_orders: number;
   avg_order_value: number;
   completion_rate: number;
+  revenue_trend?: Array<{ date: string; revenue: number }>;
+  order_distribution?: Array<{ status: string; count: number }>;
 }
 
 const AnalyticsDashboardPage = () => {
-  const { showError } = useToast();
+  const { showError, showSuccess } = useToast();
   const [analytics, setAnalytics] = useState<AnalyticsData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [exporting, setExporting] = useState(false);
 
   useEffect(() => {
     fetchAnalytics();
@@ -38,9 +42,48 @@ const AnalyticsDashboardPage = () => {
         total_orders: 45,
         avg_order_value: 2778,
         completion_rate: 87,
+        revenue_trend: [
+          { date: 'Jan', revenue: 15000 },
+          { date: 'Feb', revenue: 18000 },
+          { date: 'Mar', revenue: 22000 },
+          { date: 'Apr', revenue: 19000 },
+          { date: 'May', revenue: 25000 },
+          { date: 'Jun', revenue: 26000 },
+        ],
+        order_distribution: [
+          { status: 'Completed', count: 25 },
+          { status: 'In Progress', count: 12 },
+          { status: 'Pending', count: 5 },
+          { status: 'Cancelled', count: 3 },
+        ],
       });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleExport = async () => {
+    try {
+      setExporting(true);
+      const response = await api.get('/admin/analytics/export/', {
+        responseType: 'blob',
+      });
+      
+      // Create download link
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `analytics-${new Date().toISOString().split('T')[0]}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+      
+      showSuccess('Analytics exported successfully');
+    } catch (err: any) {
+      showError('Failed to export analytics');
+    } finally {
+      setExporting(false);
     }
   };
 
@@ -63,9 +106,18 @@ const AnalyticsDashboardPage = () => {
         title="Analytics Dashboard"
         subtitle="Business metrics and insights"
         actions={
-          <Button variant="ghost" onClick={fetchAnalytics}>
-            Refresh
-          </Button>
+          <div className="flex gap-2">
+            <Button 
+              variant="secondary" 
+              onClick={handleExport}
+              isLoading={exporting}
+            >
+              {exporting ? 'Exporting...' : 'Export CSV'}
+            </Button>
+            <Button variant="ghost" onClick={fetchAnalytics}>
+              Refresh
+            </Button>
+          </div>
         }
       />
 
@@ -122,19 +174,97 @@ const AnalyticsDashboardPage = () => {
             />
           </div>
 
-          {/* Charts Placeholder */}
+          {/* Charts */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Revenue Trend Chart */}
             <Card>
-              <h3 className="text-lg font-semibold text-text mb-4">Revenue Trend</h3>
-              <div className="h-64 flex items-center justify-center bg-dark-surface rounded-lg">
-                <p className="text-text-muted">Chart visualization coming soon</p>
+              <h3 className="text-lg font-semibold text-text mb-4 flex items-center gap-2">
+                <svg className="w-5 h-5 text-success" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+                </svg>
+                Revenue Trend
+              </h3>
+              <div className="h-80">
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={analytics.revenue_trend || []}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#30363D" />
+                    <XAxis 
+                      dataKey="date" 
+                      stroke="#8D96A0"
+                      style={{ fontSize: '12px' }}
+                    />
+                    <YAxis 
+                      stroke="#8D96A0"
+                      style={{ fontSize: '12px' }}
+                      tickFormatter={(value) => `₹${(value / 1000).toFixed(0)}k`}
+                    />
+                    <Tooltip 
+                      contentStyle={{ 
+                        backgroundColor: '#161B22', 
+                        border: '1px solid #30363D',
+                        borderRadius: '8px',
+                        color: '#F0F6FC'
+                      }}
+                      formatter={(value: number) => [`₹${value.toLocaleString()}`, 'Revenue']}
+                    />
+                    <Legend 
+                      wrapperStyle={{ color: '#F0F6FC', fontSize: '14px' }}
+                    />
+                    <Line 
+                      type="monotone" 
+                      dataKey="revenue" 
+                      stroke="#22c55e" 
+                      strokeWidth={3}
+                      dot={{ fill: '#22c55e', r: 4 }}
+                      activeDot={{ r: 6 }}
+                      name="Revenue"
+                    />
+                  </LineChart>
+                </ResponsiveContainer>
               </div>
             </Card>
 
+            {/* Order Distribution Chart */}
             <Card>
-              <h3 className="text-lg font-semibold text-text mb-4">Order Distribution</h3>
-              <div className="h-64 flex items-center justify-center bg-dark-surface rounded-lg">
-                <p className="text-text-muted">Chart visualization coming soon</p>
+              <h3 className="text-lg font-semibold text-text mb-4 flex items-center gap-2">
+                <svg className="w-5 h-5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.488 9H15V3.512A9.025 9.025 0 0120.488 9z" />
+                </svg>
+                Order Distribution
+              </h3>
+              <div className="h-80">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={analytics.order_distribution || []}
+                      cx="50%"
+                      cy="50%"
+                      labelLine={false}
+                      label={({ status, percent }: any) => `${status}: ${(percent * 100).toFixed(0)}%`}
+                      outerRadius={100}
+                      fill="#8884d8"
+                      dataKey="count"
+                    >
+                      {(analytics.order_distribution || []).map((_, index) => {
+                        const colors = ['#22c55e', '#3b82f6', '#eab308', '#ef4444'];
+                        return <Cell key={`cell-${index}`} fill={colors[index % colors.length]} />;
+                      })}
+                    </Pie>
+                    <Tooltip 
+                      contentStyle={{ 
+                        backgroundColor: '#161B22', 
+                        border: '1px solid #30363D',
+                        borderRadius: '8px',
+                        color: '#F0F6FC'
+                      }}
+                      formatter={(value: number) => [value, 'Orders']}
+                    />
+                    <Legend 
+                      wrapperStyle={{ color: '#F0F6FC', fontSize: '14px' }}
+                    />
+                  </PieChart>
+                </ResponsiveContainer>
               </div>
             </Card>
           </div>

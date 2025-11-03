@@ -139,27 +139,27 @@ const ProductForm = ({ product, onClose, onSuccess }: ProductFormProps) => {
 
   if (loadingProduct) {
     return (
-      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-        <div className="bg-white rounded-lg p-8">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Loading product...</p>
+      <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50">
+        <div className="bg-dark-surface border border-dark-border rounded-xl p-8">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
+          <p className="mt-4 text-text-muted">Loading product...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 overflow-y-auto">
-      <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full mx-4 my-8">
-        <div className="px-6 py-4 border-b border-gray-200">
-          <h2 className="text-2xl font-bold text-gray-900">
+    <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 overflow-y-auto">
+      <div className="bg-dark-surface border border-dark-border rounded-xl shadow-xl max-w-2xl w-full mx-4 my-8">
+        <div className="px-6 py-4 border-b border-dark-border">
+          <h2 className="text-2xl font-bold text-text">
             {product ? 'Edit Product' : 'Add New Product'}
           </h2>
         </div>
 
         <form onSubmit={handleSubmit} className="px-6 py-4 max-h-[calc(100vh-200px)] overflow-y-auto">
           {error && (
-            <div className="mb-4 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
+            <div className="mb-4 bg-danger/20 border border-danger rounded-lg text-danger px-4 py-3">
               {error}
             </div>
           )}
@@ -167,27 +167,27 @@ const ProductForm = ({ product, onClose, onSuccess }: ProductFormProps) => {
           {/* Product Type */}
           {!product && (
             <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-text mb-2">
                 Product Type
               </label>
               <div className="flex space-x-4">
-                <label className="flex items-center">
+                <label className="flex items-center text-text cursor-pointer">
                   <input
                     type="radio"
                     value="package"
                     checked={productType === 'package'}
                     onChange={(e) => setProductType(e.target.value as 'package')}
-                    className="mr-2"
+                    className="mr-2 accent-primary"
                   />
                   Package
                 </label>
-                <label className="flex items-center">
+                <label className="flex items-center text-text cursor-pointer">
                   <input
                     type="radio"
                     value="campaign"
                     checked={productType === 'campaign'}
                     onChange={(e) => setProductType(e.target.value as 'campaign')}
-                    className="mr-2"
+                    className="mr-2 accent-primary"
                   />
                   Campaign
                 </label>
@@ -197,36 +197,36 @@ const ProductForm = ({ product, onClose, onSuccess }: ProductFormProps) => {
 
           {/* Name */}
           <div className="mb-4">
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Product Name <span className="text-red-500">*</span>
+            <label className="block text-sm font-medium text-text mb-2">
+              Product Name <span className="text-danger">*</span>
             </label>
             <input
               type="text"
               value={formData.name}
               onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full px-4 py-2 bg-dark border border-dark-border rounded-lg text-text placeholder-text-muted focus:ring-2 focus:ring-primary focus:border-primary transition-all"
               required
             />
           </div>
 
           {/* Description */}
           <div className="mb-4">
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Description <span className="text-red-500">*</span>
+            <label className="block text-sm font-medium text-text mb-2">
+              Description <span className="text-danger">*</span>
             </label>
             <textarea
               value={formData.description}
               onChange={(e) => setFormData({ ...formData, description: e.target.value })}
               rows={3}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full px-4 py-2 bg-dark border border-dark-border rounded-lg text-text placeholder-text-muted focus:ring-2 focus:ring-primary focus:border-primary transition-all"
               required
             />
           </div>
 
           {/* Price */}
           <div className="mb-4">
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Price (₹) <span className="text-red-500">*</span>
+            <label className="block text-sm font-medium text-text mb-2">
+              Price (₹) <span className="text-danger">*</span>
             </label>
             <input
               type="number"
@@ -234,7 +234,7 @@ const ProductForm = ({ product, onClose, onSuccess }: ProductFormProps) => {
               onChange={(e) => setFormData({ ...formData, price: parseFloat(e.target.value) })}
               min="0"
               step="0.01"
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full px-4 py-2 bg-dark border border-dark-border rounded-lg text-text placeholder-text-muted focus:ring-2 focus:ring-primary focus:border-primary transition-all"
               required
             />
           </div>
@@ -242,15 +242,15 @@ const ProductForm = ({ product, onClose, onSuccess }: ProductFormProps) => {
           {/* Unit (for campaigns only) */}
           {productType === 'campaign' && (
             <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Unit <span className="text-red-500">*</span>
+              <label className="block text-sm font-medium text-text mb-2">
+                Unit <span className="text-danger">*</span>
               </label>
               <input
                 type="text"
                 value={formData.unit}
                 onChange={(e) => setFormData({ ...formData, unit: e.target.value })}
                 placeholder="e.g., per 1000 voters"
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full px-4 py-2 bg-dark border border-dark-border rounded-lg text-text placeholder-text-muted focus:ring-2 focus:ring-primary focus:border-primary transition-all"
                 required
               />
             </div>
@@ -258,7 +258,7 @@ const ProductForm = ({ product, onClose, onSuccess }: ProductFormProps) => {
 
           {/* Features */}
           <div className="mb-4">
-            <label className="block text-sm font-medium text-gray-700 mb-2">Features</label>
+            <label className="block text-sm font-medium text-text mb-2">Features</label>
             {formData.features.map((feature, index) => (
               <div key={index} className="flex mb-2">
                 <input
@@ -266,13 +266,13 @@ const ProductForm = ({ product, onClose, onSuccess }: ProductFormProps) => {
                   value={feature}
                   onChange={(e) => handleArrayFieldChange('features', index, e.target.value)}
                   placeholder="Enter feature"
-                  className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="flex-1 px-4 py-2 bg-dark border border-dark-border rounded-lg text-text placeholder-text-muted focus:ring-2 focus:ring-primary focus:border-primary transition-all"
                 />
                 {formData.features.length > 1 && (
                   <button
                     type="button"
                     onClick={() => removeArrayField('features', index)}
-                    className="ml-2 px-3 py-2 text-red-600 hover:bg-red-50 rounded-lg"
+                    className="ml-2 px-3 py-2 text-danger hover:bg-danger/20 rounded-lg transition-colors"
                   >
                     Remove
                   </button>
@@ -282,7 +282,7 @@ const ProductForm = ({ product, onClose, onSuccess }: ProductFormProps) => {
             <button
               type="button"
               onClick={() => addArrayField('features')}
-              className="text-blue-600 hover:text-blue-800 text-sm"
+              className="text-primary hover:text-primary/80 text-sm transition-colors"
             >
               + Add Feature
             </button>
@@ -290,7 +290,7 @@ const ProductForm = ({ product, onClose, onSuccess }: ProductFormProps) => {
 
           {/* Deliverables */}
           <div className="mb-4">
-            <label className="block text-sm font-medium text-gray-700 mb-2">Deliverables</label>
+            <label className="block text-sm font-medium text-text mb-2">Deliverables</label>
             {formData.deliverables.map((deliverable, index) => (
               <div key={index} className="flex mb-2">
                 <input
@@ -298,13 +298,13 @@ const ProductForm = ({ product, onClose, onSuccess }: ProductFormProps) => {
                   value={deliverable}
                   onChange={(e) => handleArrayFieldChange('deliverables', index, e.target.value)}
                   placeholder="Enter deliverable"
-                  className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="flex-1 px-4 py-2 bg-dark border border-dark-border rounded-lg text-text placeholder-text-muted focus:ring-2 focus:ring-primary focus:border-primary transition-all"
                 />
                 {formData.deliverables.length > 1 && (
                   <button
                     type="button"
                     onClick={() => removeArrayField('deliverables', index)}
-                    className="ml-2 px-3 py-2 text-red-600 hover:bg-red-50 rounded-lg"
+                    className="ml-2 px-3 py-2 text-danger hover:bg-danger/20 rounded-lg transition-colors"
                   >
                     Remove
                   </button>
@@ -314,18 +314,18 @@ const ProductForm = ({ product, onClose, onSuccess }: ProductFormProps) => {
             <button
               type="button"
               onClick={() => addArrayField('deliverables')}
-              className="text-blue-600 hover:text-blue-800 text-sm"
+              className="text-primary hover:text-primary/80 text-sm transition-colors"
             >
               + Add Deliverable
             </button>
           </div>
         </form>
 
-        <div className="px-6 py-4 border-t border-gray-200 flex justify-end space-x-3">
+        <div className="px-6 py-4 border-t border-dark-border flex justify-end gap-3">
           <button
             type="button"
             onClick={onClose}
-            className="px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50"
+            className="px-4 py-2 text-text bg-dark-hover border border-dark-border rounded-lg hover:bg-dark-border transition-colors"
             disabled={loading}
           >
             Cancel
@@ -333,7 +333,7 @@ const ProductForm = ({ product, onClose, onSuccess }: ProductFormProps) => {
           <button
             onClick={handleSubmit}
             disabled={loading}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-blue-400"
+            className="px-4 py-2 bg-primary text-primary-content rounded-lg hover:bg-primary/90 disabled:bg-primary/50 transition-colors shadow-glow-primary"
           >
             {loading ? 'Saving...' : product ? 'Update Product' : 'Create Product'}
           </button>

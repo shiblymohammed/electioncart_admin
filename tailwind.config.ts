@@ -117,6 +117,16 @@ export default {
           '0%': { opacity: '0', transform: 'translateY(10px)' },
           '100%': { opacity: '1', transform: 'translateY(0)' },
         },
+        // Fade-in animation
+        'fade-in': {
+          '0%': { opacity: '0' },
+          '100%': { opacity: '1' },
+        },
+        // Slide in from right
+        'slide-in-right': {
+          '0%': { transform: 'translateX(100%)' },
+          '100%': { transform: 'translateX(0)' },
+        },
         // Subtle pulse for 'processing' or 'pending' status
         'pulse-subtle': {
           '0%, 100%': { opacity: '1' },
@@ -137,6 +147,8 @@ export default {
       // Custom Animations mapping keyframes to utilities
       animation: {
         'fade-in-up': 'fade-in-up 0.5s ease-out forwards',
+        'fade-in': 'fade-in 0.3s ease-out forwards',
+        'slide-in-right': 'slide-in-right 0.3s ease-out forwards',
         'pulse-status': 'pulse-subtle 2s cubic-bezier(0.4, 0, 0.6, 1) infinite',
         'glow-accent': 'glow 2.5s ease-in-out infinite', // Use with `shadow-accent`
         'glow-primary': 'glow 2.5s ease-in-out infinite', // Use with `shadow-primary`
