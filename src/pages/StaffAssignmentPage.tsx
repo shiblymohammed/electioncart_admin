@@ -1,20 +1,27 @@
 import { useEffect, useState } from 'react';
-import { Link, useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { getOrderDetail, getStaffMembers, assignOrderToStaff } from '../services/adminService';
 import { OrderDetail, StaffMember } from '../types/order';
+import { useToast } from '../hooks/useToast';
+import AppLayout from '../components/layout/AppLayout';
+import PageHeader from '../components/layout/PageHeader';
+import Card from '../components/ui/Card';
+import Badge from '../components/ui/Badge';
+import Button from '../components/ui/Button';
+import LoadingSpinner from '../components/ui/LoadingSpinner';
+import { formatCurrency, formatStatus } from '../utils/formatters';
 
 const StaffAssignmentPage = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { user, logout } = useAuth();
+  const { user } = useAuth();
+  const { showSuccess, showError } = useToast();
   const [order, setOrder] = useState<OrderDetail | null>(null);
   const [staffMembers, setStaffMembers] = useState<StaffMember[]>([]);
   const [selectedStaffId, setSelectedStaffId] = useState<string>('');
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState<string | null>(null);
 
   useEffect(() => {
     // Check if user is admin
@@ -31,7 +38,6 @@ const StaffAssignmentPage = () => {
   const fetchData = async (orderId: number) => {
     try {
       setLoading(true);
-      setError(null);
 
       const [orderData, staffData] = await Promise.all([
         getOrderDetail(orderId),
@@ -47,7 +53,7 @@ const StaffAssignmentPage = () => {
       }
     } catch (err: any) {
       console.error('Error fetching data:', err);
-      setError(err.response?.data?.error?.message || 'Failed to load data');
+      showError(err.response?.data?.error?.message || 'Failed to load data');
     } finally {
       setLoading(false);
     }
@@ -57,26 +63,24 @@ const StaffAssignmentPage = () => {
     e.preventDefault();
 
     if (!selectedStaffId || !order) {
-      setError('Please select a staff member');
+      showError('Please select a staff member');
       return;
     }
 
     try {
       setSubmitting(true);
-      setError(null);
-      setSuccess(null);
 
       const result = await assignOrderToStaff(order.id, parseInt(selectedStaffId));
       
-      setSuccess(result.message || 'Order assigned successfully!');
+      showSuccess(result.message || 'Order assigned successfully!');
       
-      // Redirect to order detail page after 2 seconds
+      // Redirect to order detail page after 1.5 seconds
       setTimeout(() => {
         navigate(`/orders/${order.id}`);
-      }, 2000);
+      }, 1500);
     } catch (err: any) {
       console.error('Error assigning order:', err);
-      setError(err.response?.data?.error?.message || 'Failed to assign order');
+      showError(err.response?.data?.error?.message || 'Failed to assign order');
     } finally {
       setSubmitting(false);
     }
@@ -84,190 +88,164 @@ const StaffAssignmentPage = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Loading...</p>
+      <AppLayout>
+        <div className="flex items-center justify-center min-h-[60vh]">
+          <div className="text-center">
+            <LoadingSpinner size="xl" />
+            <p className="mt-4 text-text-muted">Loading...</p>
+          </div>
         </div>
-      </div>
+      </AppLayout>
     );
   }
 
   if (!order) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <h1 className="text-2xl font-bold text-gray-900 mb-2">Order Not Found</h1>
-          <Link
-            to="/orders"
-            className="text-blue-600 hover:text-blue-700 font-medium"
-          >
-            ← Back to Orders
-          </Link>
+      <AppLayout>
+        <div className="flex items-center justify-center min-h-[60vh]">
+          <div className="text-center">
+            <h1 className="text-2xl font-bold text-text-primary mb-2">Order Not Found</h1>
+            <Button variant="ghost" onClick={() => navigate('/orders')}>
+              ← Back to Orders
+            </Button>
+          </div>
         </div>
-      </div>
+      </AppLayout>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <header className="bg-white shadow">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div className="flex justify-between items-center">
-            <div>
-              <div className="flex items-center gap-4">
-                <Link
-                  to={`/orders/${order.id}`}
-                  className="text-gray-600 hover:text-gray-900"
-                >
-                  ← Back
-                </Link>
-                <h1 className="text-2xl font-bold text-gray-900">
-                  Assign Order {order.order_number}
-                </h1>
-              </div>
-            </div>
-            <div className="flex gap-4">
-              <Link
-                to="/"
-                className="px-4 py-2 text-gray-700 hover:text-gray-900 transition"
-              >
-                Dashboard
-              </Link>
-              <button
-                onClick={logout}
-                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition"
-              >
-                Logout
-              </button>
-            </div>
-          </div>
-        </div>
-      </header>
+    <AppLayout
+      breadcrumbs={[
+        { label: 'Orders', path: '/orders' },
+        { label: order.order_number, path: `/orders/${order.id}` },
+        { label: 'Assign Staff' },
+      ]}
+    >
+      <PageHeader
+        title={`Assign Order ${order.order_number}`}
+        subtitle="Select a staff member to handle this order"
+      />
 
-      <main className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {error && (
-          <div className="mb-6 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
-            {error}
-          </div>
-        )}
-
-        {success && (
-          <div className="mb-6 bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg">
-            {success}
-          </div>
-        )}
-
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Order Summary */}
-        <div className="bg-white rounded-lg shadow p-6 mb-6">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">Order Summary</h2>
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <p className="text-sm text-gray-600">Order Number</p>
-              <p className="font-medium text-gray-900">{order.order_number}</p>
+        <div className="lg:col-span-1">
+          <Card>
+            <h2 className="text-lg font-semibold text-text-primary mb-4">Order Summary</h2>
+            <div className="space-y-4">
+              <div>
+                <p className="text-sm text-text-muted">Order Number</p>
+                <p className="font-medium text-text-primary">{order.order_number}</p>
+              </div>
+              <div>
+                <p className="text-sm text-text-muted">Customer</p>
+                <p className="font-medium text-text-primary">{order.user.name || order.user.phone}</p>
+              </div>
+              <div>
+                <p className="text-sm text-text-muted">Total Amount</p>
+                <p className="font-medium text-text-primary text-lg">{formatCurrency(order.total_amount)}</p>
+              </div>
+              <div>
+                <p className="text-sm text-text-muted">Current Status</p>
+                <Badge variant="info" className="mt-1">
+                  {formatStatus(order.status)}
+                </Badge>
+              </div>
+              {order.assigned_to && (
+                <div className="pt-4 border-t border-border">
+                  <p className="text-sm text-text-muted">Currently Assigned To</p>
+                  <p className="font-medium text-text-primary">
+                    {order.assigned_to.name || order.assigned_to.phone}
+                  </p>
+                </div>
+              )}
             </div>
-            <div>
-              <p className="text-sm text-gray-600">Customer</p>
-              <p className="font-medium text-gray-900">{order.user.name || order.user.phone}</p>
-            </div>
-            <div>
-              <p className="text-sm text-gray-600">Total Amount</p>
-              <p className="font-medium text-gray-900">₹{order.total_amount.toLocaleString('en-IN')}</p>
-            </div>
-            <div>
-              <p className="text-sm text-gray-600">Current Status</p>
-              <p className="font-medium text-gray-900">
-                {order.status.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')}
-              </p>
-            </div>
-          </div>
-          {order.assigned_to && (
-            <div className="mt-4 pt-4 border-t border-gray-200">
-              <p className="text-sm text-gray-600">Currently Assigned To</p>
-              <p className="font-medium text-gray-900">
-                {order.assigned_to.name || order.assigned_to.phone}
-              </p>
-            </div>
-          )}
+          </Card>
         </div>
 
         {/* Assignment Form */}
-        <div className="bg-white rounded-lg shadow p-6">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">
-            {order.assigned_to ? 'Reassign to Staff Member' : 'Assign to Staff Member'}
-          </h2>
+        <div className="lg:col-span-2">
+          <Card>
+            <h2 className="text-lg font-semibold text-text-primary mb-4">
+              {order.assigned_to ? 'Reassign to Staff Member' : 'Assign to Staff Member'}
+            </h2>
 
-          <form onSubmit={handleAssign}>
-            <div className="mb-6">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Select Staff Member
-              </label>
-              <select
-                value={selectedStaffId}
-                onChange={(e) => setSelectedStaffId(e.target.value)}
-                required
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                disabled={submitting}
-              >
-                <option value="">-- Select Staff --</option>
-                {staffMembers.map(staff => (
-                  <option key={staff.id} value={staff.id}>
-                    {staff.name || staff.phone} ({staff.assigned_orders_count} orders assigned)
-                  </option>
-                ))}
-              </select>
-            </div>
+            <form onSubmit={handleAssign}>
+              <div className="mb-6">
+                <label className="block text-sm font-medium text-text-secondary mb-2">
+                  Select Staff Member
+                </label>
+                <select
+                  value={selectedStaffId}
+                  onChange={(e) => setSelectedStaffId(e.target.value)}
+                  required
+                  className="w-full px-4 py-2 bg-surface border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-text-primary"
+                  disabled={submitting}
+                >
+                  <option value="">-- Select Staff --</option>
+                  {staffMembers.map(staff => (
+                    <option key={staff.id} value={staff.id}>
+                      {staff.name || staff.phone} ({staff.assigned_orders_count} orders assigned)
+                    </option>
+                  ))}
+                </select>
+              </div>
 
-            {/* Staff List */}
-            <div className="mb-6">
-              <h3 className="text-sm font-medium text-gray-700 mb-3">Available Staff</h3>
-              <div className="space-y-2 max-h-64 overflow-y-auto">
-                {staffMembers.map(staff => (
-                  <div
-                    key={staff.id}
-                    className={`p-3 border rounded-lg cursor-pointer transition ${
-                      selectedStaffId === staff.id.toString()
-                        ? 'border-blue-500 bg-blue-50'
-                        : 'border-gray-200 hover:border-gray-300'
-                    }`}
-                    onClick={() => setSelectedStaffId(staff.id.toString())}
-                  >
-                    <div className="flex justify-between items-center">
-                      <div>
-                        <p className="font-medium text-gray-900">{staff.name || 'N/A'}</p>
-                        <p className="text-sm text-gray-600">{staff.phone}</p>
-                      </div>
-                      <div className="text-right">
-                        <p className="text-sm text-gray-600">
-                          {staff.assigned_orders_count} {staff.assigned_orders_count === 1 ? 'order' : 'orders'}
-                        </p>
+              {/* Staff List */}
+              <div className="mb-6">
+                <h3 className="text-sm font-medium text-text-secondary mb-3">Available Staff</h3>
+                <div className="space-y-2 max-h-96 overflow-y-auto">
+                  {staffMembers.map(staff => (
+                    <div
+                      key={staff.id}
+                      className={`p-4 border rounded-lg cursor-pointer transition-all ${
+                        selectedStaffId === staff.id.toString()
+                          ? 'border-primary bg-primary/5 shadow-md'
+                          : 'border-border hover:border-primary/50 hover:bg-surface-hover'
+                      }`}
+                      onClick={() => setSelectedStaffId(staff.id.toString())}
+                    >
+                      <div className="flex justify-between items-center">
+                        <div>
+                          <p className="font-medium text-text-primary">{staff.name || 'N/A'}</p>
+                          <p className="text-sm text-text-muted">{staff.phone}</p>
+                        </div>
+                        <div className="text-right">
+                          <Badge variant={staff.assigned_orders_count > 5 ? 'warning' : 'success'}>
+                            {staff.assigned_orders_count} {staff.assigned_orders_count === 1 ? 'order' : 'orders'}
+                          </Badge>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                ))}
+                  ))}
+                </div>
               </div>
-            </div>
 
-            <div className="flex gap-4">
-              <button
-                type="submit"
-                disabled={submitting || !selectedStaffId}
-                className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition disabled:bg-gray-400 disabled:cursor-not-allowed"
-              >
-                {submitting ? 'Assigning...' : order.assigned_to ? 'Reassign Order' : 'Assign Order'}
-              </button>
-              <Link
-                to={`/orders/${order.id}`}
-                className="flex-1 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition text-center"
-              >
-                Cancel
-              </Link>
-            </div>
-          </form>
+              <div className="flex gap-4">
+                <Button
+                  type="submit"
+                  variant="primary"
+                  disabled={submitting || !selectedStaffId}
+                  isLoading={submitting}
+                  className="flex-1"
+                >
+                  {order.assigned_to ? 'Reassign Order' : 'Assign Order'}
+                </Button>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={() => navigate(`/orders/${order.id}`)}
+                  disabled={submitting}
+                  className="flex-1"
+                >
+                  Cancel
+                </Button>
+              </div>
+            </form>
+          </Card>
         </div>
-      </main>
-    </div>
+      </div>
+    </AppLayout>
   );
 };
 
