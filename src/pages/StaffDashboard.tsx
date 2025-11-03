@@ -180,7 +180,7 @@ const StaffDashboard = () => {
                 </svg>
               </div>
               <div>
-                <h3 className="text-lg font-semibold text-text-primary">View All Orders</h3>
+                <h3 className="text-lg font-semibold text-text">View All Orders</h3>
                 <p className="text-sm text-text-muted">See all your assigned orders</p>
               </div>
             </div>
@@ -195,7 +195,7 @@ const StaffDashboard = () => {
               </svg>
             </div>
             <div>
-              <h3 className="text-lg font-semibold text-text-primary">Refresh Data</h3>
+              <h3 className="text-lg font-semibold text-text">Refresh Data</h3>
               <p className="text-sm text-text-muted">Update dashboard statistics</p>
             </div>
           </div>
@@ -206,7 +206,7 @@ const StaffDashboard = () => {
       <Card>
         <div className="flex justify-between items-center mb-6">
           <div>
-            <h2 className="text-xl font-semibold text-text-primary">Orders Requiring Attention</h2>
+            <h2 className="text-xl font-semibold text-text">Orders Requiring Attention</h2>
             <p className="text-sm text-text-muted mt-1">Orders that need your immediate action</p>
           </div>
           <Link to="/orders">
@@ -253,14 +253,14 @@ const StaffDashboard = () => {
               </thead>
               <tbody className="divide-y divide-border">
                 {ordersRequiringAttention.map((order) => (
-                  <tr key={order.id} className="hover:bg-surface-hover transition-colors">
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-text-primary">
+                  <tr key={order.id} className="hover:bg-dark-hover transition-colors">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-text">
                       {order.order_number}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-text-secondary">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-text-muted">
                       {order.user.name || order.user.phone}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-text-primary font-medium">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-text font-medium">
                       {formatCurrency(order.total_amount)}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
@@ -268,7 +268,7 @@ const StaffDashboard = () => {
                         {formatStatus(order.status)}
                       </Badge>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-text-secondary">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-text-muted">
                       {formatDate(order.created_at)}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm">

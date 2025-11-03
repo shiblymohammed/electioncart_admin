@@ -104,7 +104,7 @@ const StaffAssignmentPage = () => {
       <AppLayout>
         <div className="flex items-center justify-center min-h-[60vh]">
           <div className="text-center">
-            <h1 className="text-2xl font-bold text-text-primary mb-2">Order Not Found</h1>
+            <h1 className="text-2xl font-bold text-text mb-2">Order Not Found</h1>
             <Button variant="ghost" onClick={() => navigate('/orders')}>
               ← Back to Orders
             </Button>
@@ -131,19 +131,19 @@ const StaffAssignmentPage = () => {
         {/* Order Summary */}
         <div className="lg:col-span-1">
           <Card>
-            <h2 className="text-lg font-semibold text-text-primary mb-4">Order Summary</h2>
+            <h2 className="text-lg font-semibold text-text mb-4">Order Summary</h2>
             <div className="space-y-4">
               <div>
                 <p className="text-sm text-text-muted">Order Number</p>
-                <p className="font-medium text-text-primary">{order.order_number}</p>
+                <p className="font-medium text-text">{order.order_number}</p>
               </div>
               <div>
                 <p className="text-sm text-text-muted">Customer</p>
-                <p className="font-medium text-text-primary">{order.user.name || order.user.phone}</p>
+                <p className="font-medium text-text">{order.user.name || order.user.phone}</p>
               </div>
               <div>
                 <p className="text-sm text-text-muted">Total Amount</p>
-                <p className="font-medium text-text-primary text-lg">{formatCurrency(order.total_amount)}</p>
+                <p className="font-medium text-text text-lg">{formatCurrency(order.total_amount)}</p>
               </div>
               <div>
                 <p className="text-sm text-text-muted">Current Status</p>
@@ -152,9 +152,9 @@ const StaffAssignmentPage = () => {
                 </Badge>
               </div>
               {order.assigned_to && (
-                <div className="pt-4 border-t border-border">
+                <div className="pt-4 border-t border-dark-border">
                   <p className="text-sm text-text-muted">Currently Assigned To</p>
-                  <p className="font-medium text-text-primary">
+                  <p className="font-medium text-text">
                     {order.assigned_to.name || order.assigned_to.phone}
                   </p>
                 </div>
@@ -166,20 +166,20 @@ const StaffAssignmentPage = () => {
         {/* Assignment Form */}
         <div className="lg:col-span-2">
           <Card>
-            <h2 className="text-lg font-semibold text-text-primary mb-4">
+            <h2 className="text-lg font-semibold text-text mb-4">
               {order.assigned_to ? 'Reassign to Staff Member' : 'Assign to Staff Member'}
             </h2>
 
             <form onSubmit={handleAssign}>
               <div className="mb-6">
-                <label className="block text-sm font-medium text-text-secondary mb-2">
+                <label className="block text-sm font-medium text-text-muted mb-2">
                   Select Staff Member
                 </label>
                 <select
                   value={selectedStaffId}
                   onChange={(e) => setSelectedStaffId(e.target.value)}
                   required
-                  className="w-full px-4 py-2 bg-surface border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-text-primary"
+                  className="w-full px-4 py-2 bg-dark-surface border border-dark-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-text"
                   disabled={submitting}
                 >
                   <option value="">-- Select Staff --</option>
@@ -193,7 +193,7 @@ const StaffAssignmentPage = () => {
 
               {/* Staff List */}
               <div className="mb-6">
-                <h3 className="text-sm font-medium text-text-secondary mb-3">Available Staff</h3>
+                <h3 className="text-sm font-medium text-text-muted mb-3">Available Staff</h3>
                 <div className="space-y-2 max-h-96 overflow-y-auto">
                   {staffMembers.map(staff => (
                     <div
@@ -201,13 +201,13 @@ const StaffAssignmentPage = () => {
                       className={`p-4 border rounded-lg cursor-pointer transition-all ${
                         selectedStaffId === staff.id.toString()
                           ? 'border-primary bg-primary/5 shadow-md'
-                          : 'border-border hover:border-primary/50 hover:bg-surface-hover'
+                          : 'border-dark-border hover:border-primary/50 hover:bg-dark-hover'
                       }`}
                       onClick={() => setSelectedStaffId(staff.id.toString())}
                     >
                       <div className="flex justify-between items-center">
                         <div>
-                          <p className="font-medium text-text-primary">{staff.name || 'N/A'}</p>
+                          <p className="font-medium text-text">{staff.name || 'N/A'}</p>
                           <p className="text-sm text-text-muted">{staff.phone}</p>
                         </div>
                         <div className="text-right">
