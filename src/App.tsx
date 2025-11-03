@@ -1,5 +1,8 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
+import { ToastProvider } from './context/ToastContext';
+import { SidebarProvider } from './context/SidebarContext';
+import ToastContainer from './components/ui/ToastContainer';
 import LoginPage from './pages/LoginPage';
 import OrderListPage from './pages/OrderListPage';
 import OrderDetailPage from './pages/OrderDetailPage';
@@ -16,7 +19,10 @@ function App() {
   return (
     <Router>
       <AuthProvider>
-        <Routes>
+        <ToastProvider>
+          <SidebarProvider>
+            <ToastContainer />
+            <Routes>
           <Route path="/login" element={<LoginPage />} />
           <Route
             path="/"
@@ -91,7 +97,9 @@ function App() {
             }
           />
           <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
+            </Routes>
+          </SidebarProvider>
+        </ToastProvider>
       </AuthProvider>
     </Router>
   );

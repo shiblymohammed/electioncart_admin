@@ -1,369 +1,127 @@
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Product } from '../types/product';
-import { getAllProducts, toggleProductStatus, deletePackage, deleteCampaign, togglePackagePopular, toggleCampaignPopular } from '../services/productService';
-import ProductForm from '../components/ProductForm';
-import DeleteConfirmationDialog from '../components/DeleteConfirmationDialog';
-import { PopularToggleButton } from '../components/PopularToggleButton';
+import { useToast } from '../hooks/useToast';
+import AppLayout from '../components/layout/AppLayout';
+import PageHeader from '../components/layout/PageHeader';
+import Card from '../components/ui/Card';
+import Badge from '../components/ui/Badge';
+import LoadingSpinner from '../components/ui/LoadingSpinner';
+import EmptyState from '../components/ui/EmptyState';
+import Button from '../components/ui/Button';
+import api from '../services/api';
+
+interface Product {
+  id: number;
+  name: string;
+  price: number;
+  is_popular: boolean;
+  type: string;
+}
 
 const ProductManagementPage = () => {
   const navigate = useNavigate();
+  const { showError } = useToast();
   const [products, setProducts] = useState<Product[]>([]);
-  const [filteredProducts, setFilteredProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [filterType, setFilterType] = useState<'all' | 'package' | 'campaign'>('all');
-  const [filterStatus, setFilterStatus] = useState<'all' | 'active' | 'inactive'>('all');
-  const [showForm, setShowForm] = useState(false);
-  const [editingProduct, setEditingProduct] = useState<Product | null>(null);
-  const [deleteConfirm, setDeleteConfirm] = useState<{ show: boolean; product: Product | null }>({
-    show: false,
-    product: null,
-  });
-  const [popularPackageCount, setPopularPackageCount] = useState(0);
-  const [popularCampaignCount, setPopularCampaignCount] = useState(0);
-  const [togglingPopular, setTogglingPopular] = useState<number | null>(null);
+  const [activeTab, setActiveTab] = useState<'packages' | 'campaigns'>('packages');
 
   useEffect(() => {
     fetchProducts();
-  }, []);
-
-  useEffect(() => {
-    applyFilters();
-    // Update popular counts
-    const packageCount = products.filter(p => p.type === 'package' && p.is_popular).length;
-    const campaignCount = products.filter(p => p.type === 'campaign' && p.is_popular).length;
-    setPopularPackageCount(packageCount);
-    setPopularCampaignCount(campaignCount);
-  }, [products, searchTerm, filterType, filterStatus]);
+  }, [activeTab]);
 
   const fetchProducts = async () => {
     try {
       setLoading(true);
-      const data = await getAllProducts();
-      setProducts(data);
-      setError(null);
+      const endpoint = activeTab === 'packages' ? '/packages/' : '/campaigns/';
+      const response = await api.get(endpoint);
+      setProducts(response.data);
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Failed to load products');
+      console.error('Error fetching products:', err);
+      showError('Failed to load products');
     } finally {
       setLoading(false);
     }
   };
 
-  const applyFilters = () => {
-    let filtered = [...products];
-
-    // Search filter
-    if (searchTerm) {
-      filtered = filtered.filter((product) =>
-        product.name.toLowerCase().includes(searchTerm.toLowerCase())
-      );
-    }
-
-    // Type filter
-    if (filterType !== 'all') {
-      filtered = filtered.filter((product) => product.type === filterType);
-    }
-
-    // Status filter
-    if (filterStatus !== 'all') {
-      filtered = filtered.filter((product) =>
-        filterStatus === 'active' ? product.is_active : !product.is_active
-      );
-    }
-
-    setFilteredProducts(filtered);
-  };
-
-  const handleToggleStatus = async (product: Product) => {
-    try {
-      await toggleProductStatus(product.type, product.id);
-      await fetchProducts();
-    } catch (err: any) {
-      alert(err.response?.data?.message || 'Failed to toggle product status');
-    }
-  };
-
-  const handleTogglePopular = async (product: Product) => {
-    try {
-      setTogglingPopular(product.id);
-      
-      if (product.type === 'package') {
-        await togglePackagePopular(product.id);
-      } else {
-        await toggleCampaignPopular(product.id);
-      }
-      
-      await fetchProducts();
-    } catch (err: any) {
-      const errorMessage = err.response?.data?.error || err.response?.data?.message || 'Failed to toggle popular status';
-      alert(errorMessage);
-    } finally {
-      setTogglingPopular(null);
-    }
-  };
-
-  const handleDelete = async () => {
-    if (!deleteConfirm.product) return;
-
-    try {
-      if (deleteConfirm.product.type === 'package') {
-        await deletePackage(deleteConfirm.product.id);
-      } else {
-        await deleteCampaign(deleteConfirm.product.id);
-      }
-      await fetchProducts();
-      setDeleteConfirm({ show: false, product: null });
-    } catch (err: any) {
-      alert(err.response?.data?.message || 'Failed to delete product');
-    }
-  };
-
-  const handleEdit = (product: Product) => {
-    setEditingProduct(product);
-    setShowForm(true);
-  };
-
-  const handleFormClose = () => {
-    setShowForm(false);
-    setEditingProduct(null);
-  };
-
-  const handleFormSuccess = () => {
-    fetchProducts();
-    handleFormClose();
-  };
-
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Loading products...</p>
+      <AppLayout>
+        <div className="flex items-center justify-center min-h-[60vh]">
+          <div className="text-center">
+            <LoadingSpinner size="xl" />
+            <p className="mt-4 text-text-muted">Loading products...</p>
+          </div>
         </div>
-      </div>
+      </AppLayout>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Header */}
-        <div className="mb-8">
-          <div className="flex justify-between items-center">
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900">Product Management</h1>
-              <p className="mt-2 text-gray-600">Manage packages and campaigns</p>
-            </div>
-            <button
-              onClick={() => navigate('/')}
-              className="px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50"
-            >
-              Back to Dashboard
-            </button>
-          </div>
-        </div>
+    <AppLayout breadcrumbs={[{ label: 'Products' }]}>
+      <PageHeader
+        title="Product Management"
+        subtitle={`Manage packages and campaigns`}
+      />
 
-        {error && (
-          <div className="mb-6 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
-            {error}
-          </div>
-        )}
-
-        {/* Filters and Search */}
-        <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <div className="md:col-span-2">
-              <label className="block text-sm font-medium text-gray-700 mb-2">Search</label>
-              <input
-                type="text"
-                placeholder="Search by product name..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Type</label>
-              <select
-                value={filterType}
-                onChange={(e) => setFilterType(e.target.value as any)}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              >
-                <option value="all">All Types</option>
-                <option value="package">Packages</option>
-                <option value="campaign">Campaigns</option>
-              </select>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Status</label>
-              <select
-                value={filterStatus}
-                onChange={(e) => setFilterStatus(e.target.value as any)}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              >
-                <option value="all">All Status</option>
-                <option value="active">Active</option>
-                <option value="inactive">Inactive</option>
-              </select>
-            </div>
-          </div>
-          <div className="mt-4">
-            <button
-              onClick={() => setShowForm(true)}
-              className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium"
-            >
-              + Add Product
-            </button>
-          </div>
-        </div>
-
-        {/* Product List */}
-        <div className="bg-white rounded-lg shadow-sm overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Product Name
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Type
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Price
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Status
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Popular
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Created
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Actions
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {filteredProducts.length === 0 ? (
-                  <tr>
-                    <td colSpan={7} className="px-6 py-8 text-center text-gray-500">
-                      No products found
-                    </td>
-                  </tr>
-                ) : (
-                  filteredProducts.map((product) => (
-                    <tr key={`${product.type}-${product.id}`} className="hover:bg-gray-50">
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="flex items-center gap-2">
-                          <div className="text-sm font-medium text-gray-900">{product.name}</div>
-                          {product.is_popular && (
-                            <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-green-100 text-green-800 text-xs font-semibold rounded-full border border-green-200">
-                              <svg className="w-3 h-3 fill-current" viewBox="0 0 20 20">
-                                <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-                              </svg>
-                              #{product.popular_order}
-                            </span>
-                          )}
-                        </div>
-                        <div className="text-sm text-gray-500 truncate max-w-xs">
-                          {product.description}
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span
-                          className={`px-2 py-1 text-xs font-medium rounded-full ${
-                            product.type === 'package'
-                              ? 'bg-blue-100 text-blue-800'
-                              : 'bg-purple-100 text-purple-800'
-                          }`}
-                        >
-                          {product.type}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        ₹{product.price.toLocaleString()}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <button
-                          onClick={() => handleToggleStatus(product)}
-                          className={`px-3 py-1 text-xs font-medium rounded-full ${
-                            product.is_active
-                              ? 'bg-green-100 text-green-800 hover:bg-green-200'
-                              : 'bg-gray-100 text-gray-800 hover:bg-gray-200'
-                          }`}
-                        >
-                          {product.is_active ? 'Active' : 'Inactive'}
-                        </button>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <PopularToggleButton
-                          isPopular={product.is_popular || false}
-                          popularOrder={product.popular_order}
-                          onToggle={() => handleTogglePopular(product)}
-                          disabled={
-                            !product.is_popular && 
-                            ((product.type === 'package' && popularPackageCount >= 3) ||
-                             (product.type === 'campaign' && popularCampaignCount >= 3))
-                          }
-                          loading={togglingPopular === product.id}
-                        />
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {new Date(product.created_at).toLocaleDateString()}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
-                        <button
-                          onClick={() => navigate(`/products/${product.type}/${product.id}`)}
-                          className="text-green-600 hover:text-green-900"
-                        >
-                          View
-                        </button>
-                        <button
-                          onClick={() => handleEdit(product)}
-                          className="text-blue-600 hover:text-blue-900"
-                        >
-                          Edit
-                        </button>
-                        <button
-                          onClick={() => setDeleteConfirm({ show: true, product })}
-                          className="text-red-600 hover:text-red-900"
-                        >
-                          Delete
-                        </button>
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
-        </div>
+      {/* Tabs */}
+      <div className="flex gap-4 mb-6">
+        <button
+          onClick={() => setActiveTab('packages')}
+          className={`px-6 py-3 rounded-lg font-medium transition-all ${
+            activeTab === 'packages'
+              ? 'bg-primary text-primary-content shadow-glow-primary'
+              : 'bg-dark-surface text-text-muted hover:text-text'
+          }`}
+        >
+          Packages
+        </button>
+        <button
+          onClick={() => setActiveTab('campaigns')}
+          className={`px-6 py-3 rounded-lg font-medium transition-all ${
+            activeTab === 'campaigns'
+              ? 'bg-primary text-primary-content shadow-glow-primary'
+              : 'bg-dark-surface text-text-muted hover:text-text'
+          }`}
+        >
+          Campaigns
+        </button>
       </div>
 
-      {/* Product Form Modal */}
-      {showForm && (
-        <ProductForm
-          product={editingProduct}
-          onClose={handleFormClose}
-          onSuccess={handleFormSuccess}
+      {products.length === 0 ? (
+        <EmptyState
+          title={`No ${activeTab} found`}
+          message={`${activeTab} will appear here once created`}
+          actionLabel="Refresh"
+          onAction={fetchProducts}
         />
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {products.map((product) => (
+            <Card key={product.id} hoverable glowOnHover>
+              <div className="flex justify-between items-start mb-4">
+                <h3 className="text-lg font-semibold text-text">{product.name}</h3>
+                {product.is_popular && (
+                  <Badge variant="warning">
+                    <svg className="w-4 h-4 inline mr-1" fill="currentColor" viewBox="0 0 20 20">
+                      <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                    </svg>
+                    Popular
+                  </Badge>
+                )}
+              </div>
+              <p className="text-2xl font-bold text-primary mb-4">₹{product.price.toLocaleString()}</p>
+              <Button
+                variant="primary"
+                fullWidth
+                onClick={() => navigate(`/products/${activeTab}/${product.id}`)}
+              >
+                View Details
+              </Button>
+            </Card>
+          ))}
+        </div>
       )}
-
-      {/* Delete Confirmation Dialog */}
-      {deleteConfirm.show && deleteConfirm.product && (
-        <DeleteConfirmationDialog
-          title="Delete Product"
-          message={`Are you sure you want to delete "${deleteConfirm.product.name}"? This action cannot be undone.`}
-          onConfirm={handleDelete}
-          onCancel={() => setDeleteConfirm({ show: false, product: null })}
-        />
-      )}
-    </div>
+    </AppLayout>
   );
 };
 

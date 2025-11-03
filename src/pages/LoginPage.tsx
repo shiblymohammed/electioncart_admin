@@ -2,14 +2,17 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import authService from '../services/authService';
 import { useAuth } from '../context/AuthContext';
+import { useToast } from '../hooks/useToast';
+import Button from '../components/ui/Button';
+import Card from '../components/ui/Card';
 
 const LoginPage = () => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
   const navigate = useNavigate();
   const { login: authLogin, isAuthenticated } = useAuth();
+  const { showError, showSuccess } = useToast();
 
   useEffect(() => {
     // Redirect if already authenticated
@@ -20,7 +23,6 @@ const LoginPage = () => {
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError('');
     setLoading(true);
 
     try {
@@ -38,44 +40,52 @@ const LoginPage = () => {
       // Update auth context
       authLogin(response.user, response.token);
       
+      // Show success message
+      showSuccess('Welcome back!');
+      
       // Navigate to dashboard
       navigate('/');
     } catch (err: any) {
-      setError(err.message || 'Login failed. Please try again.');
+      showError(err.message || 'Login failed. Please try again.');
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
-      <div className="sm:mx-auto sm:w-full sm:max-w-md">
-        <div className="text-center">
-          <h1 className="text-4xl font-bold text-indigo-600 mb-2">Election Cart</h1>
-          <h2 className="text-2xl font-semibold text-gray-900">Admin Panel</h2>
-        </div>
-        <p className="mt-4 text-center text-sm text-gray-600">
-          Sign in to access the admin dashboard
-        </p>
+    <div className="min-h-screen bg-gradient-to-br from-dark via-dark-surface to-dark flex flex-col justify-center py-12 px-4 sm:px-6 lg:px-8 relative overflow-hidden">
+      {/* Animated background elements */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-primary/10 rounded-full blur-3xl animate-float-gentle"></div>
+        <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-accent/10 rounded-full blur-3xl animate-float-gentle" style={{ animationDelay: '1s' }}></div>
       </div>
 
-      <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
-        <div className="bg-white py-8 px-4 shadow-xl sm:rounded-lg sm:px-10">
-          {error && (
-            <div className="mb-4 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
-              {error}
-            </div>
-          )}
+      {/* Content */}
+      <div className="relative z-10">
+        {/* Logo and title */}
+        <div className="sm:mx-auto sm:w-full sm:max-w-md text-center mb-8">
+          <div className="inline-flex items-center justify-center w-20 h-20 bg-gradient-primary rounded-2xl shadow-glow-primary mb-6 animate-float-gentle">
+            <span className="text-white font-bold text-3xl">EC</span>
+          </div>
+          <h1 className="text-4xl font-bold text-text mb-2">Election Cart</h1>
+          <h2 className="text-2xl font-semibold text-text-muted">Admin Panel</h2>
+          <p className="mt-4 text-text-muted">
+            Sign in to access the admin dashboard
+          </p>
+        </div>
 
-          <form onSubmit={handleLogin} className="space-y-6">
-            <div>
-              <label
-                htmlFor="username"
-                className="block text-sm font-medium text-gray-700"
-              >
-                Username
-              </label>
-              <div className="mt-1">
+        {/* Login card */}
+        <div className="sm:mx-auto sm:w-full sm:max-w-md">
+          <Card className="animate-fade-in-up" glowOnHover>
+            <form onSubmit={handleLogin} className="space-y-6">
+              {/* Username field */}
+              <div>
+                <label
+                  htmlFor="username"
+                  className="block text-sm font-medium text-text mb-2"
+                >
+                  Username
+                </label>
                 <input
                   id="username"
                   name="username"
@@ -84,21 +94,20 @@ const LoginPage = () => {
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
                   placeholder="Enter your username"
-                  className="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                  className="appearance-none block w-full px-4 py-3 bg-dark-surface border border-dark-border rounded-lg text-text placeholder-text-muted focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition-all shadow-glow-primary/0 focus:shadow-glow-primary"
                   disabled={loading}
                   autoFocus
                 />
               </div>
-            </div>
 
-            <div>
-              <label
-                htmlFor="password"
-                className="block text-sm font-medium text-gray-700"
-              >
-                Password
-              </label>
-              <div className="mt-1">
+              {/* Password field */}
+              <div>
+                <label
+                  htmlFor="password"
+                  className="block text-sm font-medium text-text mb-2"
+                >
+                  Password
+                </label>
                 <input
                   id="password"
                   name="password"
@@ -107,33 +116,35 @@ const LoginPage = () => {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="Enter your password"
-                  className="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                  className="appearance-none block w-full px-4 py-3 bg-dark-surface border border-dark-border rounded-lg text-text placeholder-text-muted focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition-all shadow-glow-primary/0 focus:shadow-glow-primary"
                   disabled={loading}
                 />
               </div>
-            </div>
 
-            <div>
-              <button
+              {/* Submit button */}
+              <Button
                 type="submit"
-                disabled={loading}
-                className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:bg-gray-400 disabled:cursor-not-allowed transition"
+                variant="primary"
+                size="lg"
+                fullWidth
+                isLoading={loading}
               >
                 {loading ? 'Signing In...' : 'Sign In'}
-              </button>
-            </div>
-          </form>
+              </Button>
+            </form>
 
-          <div className="mt-6 pt-6 border-t border-gray-200">
-            <p className="text-xs text-center text-gray-500">
-              Admin and staff access only
-            </p>
-            <div className="mt-4 text-xs text-center text-gray-400">
-              <p>Test Credentials:</p>
-              <p className="mt-1">Admin: admin / admin123</p>
-              <p>Staff: staff / staff123</p>
+            {/* Footer */}
+            <div className="mt-6 pt-6 border-t border-dark-border">
+              <p className="text-xs text-center text-text-muted">
+                Admin and staff access only
+              </p>
+              <div className="mt-4 text-xs text-center text-text-muted/70">
+                <p>Test Credentials:</p>
+                <p className="mt-1">Admin: admin / admin123</p>
+                <p>Staff: staff / staff123</p>
+              </div>
             </div>
-          </div>
+          </Card>
         </div>
       </div>
     </div>
