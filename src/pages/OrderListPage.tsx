@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Link, useSearchParams, useNavigate } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { getOrders, getStaffMembers } from '../services/adminService';
 import { getAssignedOrders } from '../services/staffService';
@@ -17,11 +17,10 @@ import { formatDate, formatCurrency, formatStatus } from '../utils/formatters';
 
 const OrderListPage = () => {
   const { user } = useAuth();
-  const navigate = useNavigate();
   const { showError } = useToast();
-  const [searchParams, setSearchParams] = useSearchParams();
+  const [searchParams] = useSearchParams();
   const [orders, setOrders] = useState<AdminOrder[]>([]);
-  const [staffMembers, setStaffMembers] = useState<StaffMember[]>([]);
+  const [, setStaffMembers] = useState<StaffMember[]>([]);
   const [loading, setLoading] = useState(true);
   const [viewMode, setViewMode] = useState<'table' | 'grid'>('table');
 

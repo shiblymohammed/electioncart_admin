@@ -6,12 +6,11 @@ import { formatDate, formatCurrency, formatStatus } from '../../../utils/formatt
 
 interface OrderCardProps {
   order: AdminOrder;
-  onViewDetails?: (id: number) => void;
   onAssign?: (id: number) => void;
   showActions?: boolean;
 }
 
-const OrderCard = ({ order, onViewDetails, onAssign, showActions = true }: OrderCardProps) => {
+const OrderCard = ({ order, onAssign, showActions = true }: OrderCardProps) => {
   const getStatusVariant = (status: string) => {
     switch (status) {
       case 'pending_payment':
@@ -46,7 +45,7 @@ const OrderCard = ({ order, onViewDetails, onAssign, showActions = true }: Order
         {order.assigned_to && (
           <div className="flex items-center gap-2">
             <div className="w-8 h-8 rounded-full bg-gradient-primary flex items-center justify-center text-white text-sm font-semibold">
-              {order.assigned_to.username?.charAt(0).toUpperCase() || 'S'}
+              {order.assigned_to.name?.charAt(0).toUpperCase() || 'S'}
             </div>
           </div>
         )}

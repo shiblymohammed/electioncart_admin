@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react';
-import { useAuth } from '../context/AuthContext';
 import { getStaffMembers } from '../services/adminService';
 import { StaffMember } from '../types/order';
 import { useToast } from '../hooks/useToast';
@@ -10,7 +9,6 @@ import EmptyState from '../components/ui/EmptyState';
 import StaffCard from '../components/features/staff/StaffCard';
 
 const StaffListPage = () => {
-  const { user } = useAuth();
   const { showError } = useToast();
   const [staff, setStaff] = useState<StaffMember[]>([]);
   const [loading, setLoading] = useState(true);

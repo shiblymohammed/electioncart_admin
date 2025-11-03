@@ -17,7 +17,7 @@ const OrderDetailPage = () => {
   const { id } = useParams<{ id: string }>();
   const { user } = useAuth();
   const navigate = useNavigate();
-  const { showError, showSuccess } = useToast();
+  const { showError } = useToast();
   const [order, setOrder] = useState<OrderDetailType | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -153,8 +153,8 @@ const OrderDetailPage = () => {
               </div>
               <div className="flex justify-between">
                 <span className="text-text-muted">Payment Status:</span>
-                <Badge variant={order.payment_status === 'paid' ? 'success' : 'warning'}>
-                  {order.payment_status}
+                <Badge variant={(order as any).payment_status === 'paid' ? 'success' : 'warning'}>
+                  {(order as any).payment_status || 'pending'}
                 </Badge>
               </div>
             </div>
@@ -166,10 +166,10 @@ const OrderDetailPage = () => {
               <h3 className="text-lg font-semibold text-text mb-4">Assigned To</h3>
               <div className="flex items-center gap-3">
                 <div className="w-12 h-12 rounded-full bg-gradient-primary flex items-center justify-center text-white text-lg font-bold">
-                  {order.assigned_to.username?.charAt(0).toUpperCase()}
+                  {order.assigned_to.name?.charAt(0).toUpperCase() || 'S'}
                 </div>
                 <div>
-                  <p className="text-text font-medium">{order.assigned_to.username}</p>
+                  <p className="text-text font-medium">{order.assigned_to.name || order.assigned_to.phone}</p>
                   <p className="text-sm text-text-muted">Staff Member</p>
                 </div>
               </div>

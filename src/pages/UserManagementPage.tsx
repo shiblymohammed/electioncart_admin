@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react';
-import { useAuth } from '../context/AuthContext';
 import { useToast } from '../hooks/useToast';
 import AppLayout from '../components/layout/AppLayout';
 import PageHeader from '../components/layout/PageHeader';
@@ -18,7 +17,6 @@ interface User {
 }
 
 const UserManagementPage = () => {
-  const { user } = useAuth();
   const { showError } = useToast();
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
