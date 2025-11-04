@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Unregister Service Worker</title>
+    <style>
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            max-width: 600px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #0D1117;
+            color: #fff;
+        }
+        .status { padding: 20px; margin: 10px 0; border-radius: 8px; }
+        .success { background: #1a472a; border: 1px solid #2ea043; }
+        .error { background: #4a1a1a; border: 1px solid #da3633; }
+        .info { background: #1a3a4a; border: 1px solid #2188ff; }
+        button {
+            background: #238636;
+            color: #fff;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 10px 5px;
+        }
+        button:hover { background: #2ea043; }
+        button.danger { background: #da3633; }
+        button.danger:hover { background: #f85149; }
+        pre { background: #161b22; padding: 15px; border-radius: 6px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>🔧 Service Worker Management</h1>
+    
+    <div class="status info">
+        <strong>This page helps fix the blank screen issue caused by cached service workers.</strong>
+    </div>
+
+    <div id="status"></div>
+
+    <div style="margin: 30px 0;">
+        <button onclick="unregisterAll()">🗑️ Unregister All Service Workers</button>
+        <button onclick="clearAllCaches()" class="danger">🧹 Clear All Caches</button>
+        <button onclick="checkStatus()">🔍 Check Status</button>
+        <button onclick="window.location.href='/'">🏠 Go to App</button>
+    </div>
+
+    <h2>Instructions</h2>
+    <div class="status info">
+        <ol>
+            <li>Click "Unregister All Service Workers"</li>
+            <li>Click "Clear All Caches"</li>
+            <li>Close this tab</li>
+            <li>Close ALL tabs of admin.lapoelectioncart.com</li>
+            <li>Clear browser cache (Ctrl+Shift+Delete)</li>
+            <li>Reopen admin.lapoelectioncart.com</li>
+        </ol>
+    </div>
+
+    <h2>Log</h2>
+    <pre id="log"></pre>
+
+    <script>
+        const log = document.getElementById('log');
+        const status = document.getElementById('status');
+
+        function addLog(message) {
+            const timestamp = new Date().toLocaleTimeString();
+            log.textContent += `[${timestamp}] ${message}\n`;
+            console.log(message);
+        }
+
+        function showStatus(message, type = 'info') {
+            status.innerHTML = `<div class="status ${type}"><strong>${message}</strong></div>`;
+        }
+
+        async function unregisterAll() {
+            addLog('Starting service worker unregistration...');
+            showStatus('Unregistering service workers...', 'info');
+
+            if ('serviceWorker' in navigator) {
+                try {
+                    const registrations = await navigator.serviceWorker.getRegistrations();
+                    addLog(`Found ${registrations.length} service worker(s)`);
+
+                    if (registrations.length === 0) {
+                        showStatus('✅ No service workers found', 'success');
+                        addLog('No service workers to unregister');
+                        return;
+                    }
+
+                    for (const registration of registrations) {
+                        addLog(`Unregistering: ${registration.scope}`);
+                        await registration.unregister();
+                        addLog(`✅ Unregistered: ${registration.scope}`);
+                    }
+
+                    showStatus(`✅ Successfully unregistered ${registrations.length} service worker(s)`, 'success');
+                    addLog('All service workers unregistered successfully');
+                } catch (error) {
+                    showStatus('❌ Error unregistering service workers', 'error');
+                    addLog(`Error: ${error.message}`);
+                }
+            } else {
+                showStatus('❌ Service workers not supported', 'error');
+                addLog('Service workers not supported in this browser');
+            }
+        }
+
+        async function clearAllCaches() {
+            addLog('Starting cache clearing...');
+            showStatus('Clearing all caches...', 'info');
+
+            if ('caches' in window) {
+                try {
+                    const cacheNames = await caches.keys();
+                    addLog(`Found ${cacheNames.length} cache(s)`);
+
+                    if (cacheNames.length === 0) {
+                        showStatus('✅ No caches found', 'success');
+                        addLog('No caches to clear');
+                        return;
+                    }
+
+                    for (const cacheName of cacheNames) {
+                        addLog(`Deleting cache: ${cacheName}`);
+                        await caches.delete(cacheName);
+                        addLog(`✅ Deleted: ${cacheName}`);
+                    }
+
+                    showStatus(`✅ Successfully cleared ${cacheNames.length} cache(s)`, 'success');
+                    addLog('All caches cleared successfully');
+                } catch (error) {
+                    showStatus('❌ Error clearing caches', 'error');
+                    addLog(`Error: ${error.message}`);
+                }
+            } else {
+                showStatus('❌ Cache API not supported', 'error');
+                addLog('Cache API not supported in this browser');
+            }
+        }
+
+        async function checkStatus() {
+            addLog('Checking service worker and cache status...');
+            showStatus('Checking status...', 'info');
+
+            let statusMessage = '';
+
+            // Check service workers
+            if ('serviceWorker' in navigator) {
+                const registrations = await navigator.serviceWorker.getRegistrations();
+                statusMessage += `Service Workers: ${registrations.length}\n`;
+                addLog(`Service workers registered: ${registrations.length}`);
+                
+                registrations.forEach((reg, index) => {
+                    statusMessage += `  ${index + 1}. ${reg.scope}\n`;
+                    addLog(`  - ${reg.scope}`);
+                });
+            }
+
+            // Check caches
+            if ('caches' in window) {
+                const cacheNames = await caches.keys();
+                statusMessage += `\nCaches: ${cacheNames.length}\n`;
+                addLog(`Caches found: ${cacheNames.length}`);
+                
+                cacheNames.forEach((name, index) => {
+                    statusMessage += `  ${index + 1}. ${name}\n`;
+                    addLog(`  - ${name}`);
+                });
+            }
+
+            if (statusMessage) {
+                showStatus('Status checked - see log below', 'info');
+            } else {
+                showStatus('✅ Clean - No service workers or caches', 'success');
+                addLog('No service workers or caches found');
+            }
+        }
+
+        // Auto-check on load
+        window.addEventListener('load', () => {
+            addLog('Page loaded');
+            checkStatus();
+        });
+    </script>
+</body>
+</html>
