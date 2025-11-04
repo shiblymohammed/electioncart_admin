@@ -20,16 +20,6 @@ interface ChecklistViewProps {
 const ChecklistView = ({ order, onUpdate }: ChecklistViewProps) => {
   const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
 
-  const getFullImageUrl = (path: string | null | undefined): string | null => {
-    if (!path) return null;
-    // If path already starts with http, return as is
-    if (path.startsWith('http://') || path.startsWith('https://')) {
-      return path;
-    }
-    // Otherwise, prepend the API base URL
-    return `${API_BASE_URL}${path}`;
-  };
-
   const formatShortDate = (dateString: string) => {
     const date = new Date(dateString);
     return date.toLocaleDateString('en-IN', {
@@ -74,73 +64,108 @@ const ChecklistView = ({ order, onUpdate }: ChecklistViewProps) => {
           <div className="space-y-3">
             <h3 className="text-sm font-medium text-gray-700 border-b pb-2">Campaign Resources</h3>
             {order.resources && order.resources.length > 0 ? (
-              order.resources.map((resource, index) => (
-                <div key={resource.id} className="text-sm space-y-2">
-                  {index > 0 && <div className="border-t pt-2 mt-2"></div>}
-                  {resource.campaign_slogan && (
-                    <div>
-                      <p className="text-xs text-gray-600">Slogan</p>
-                      <p className="text-gray-900 italic">"{resource.campaign_slogan}"</p>
-                    </div>
+              order.resources.map((resourceGroup: any, groupIndex: number) => (
+                <div key={resourceGroup.order_item_id} className="text-sm space-y-2">
+                  {groupIndex > 0 && <div className="border-t pt-2 mt-2"></div>}
+                  
+                  {/* Item Name */}
+                  <div className="mb-2">
+                    <p className="text-xs font-semibold text-gray-700">{resourceGroup.item_name}</p>
+                  </div>
+
+                  {/* Dynamic Resources */}
+                  {resourceGroup.dynamic && resourceGroup.dynamic.length > 0 && (
+                    <>
+                      {/* Text fields (slogan, phone, etc.) */}
+                      {resourceGroup.dynamic
+                        .filter((f: any) => ['text', 'phone', 'date'].includes(f.field_type))
+                        .map((field: any) => (
+                          <div key={field.id}>
+                            <p className="text-xs text-gray-600">{field.field_name}</p>
+                            {field.field_type === 'phone' ? (
+                              <a 
+                                href={`https://wa.me/${field.value.replace(/[^0-9]/g, '')}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-blue-600 hover:text-blue-700 inline-flex items-center"
+                              >
+                                {field.value}
+                                <svg className="w-3 h-3 ml-1" fill="currentColor" viewBox="0 0 20 20">
+                                  <path d="M11 3a1 1 0 100 2h2.586l-6.293 6.293a1 1 0 101.414 1.414L15 6.414V9a1 1 0 102 0V4a1 1 0 00-1-1h-5z" />
+                                  <path d="M5 5a2 2 0 00-2 2v8a2 2 0 002 2h8a2 2 0 002-2v-3a1 1 0 10-2 0v3H5V7h3a1 1 0 000-2H5z" />
+                                </svg>
+                              </a>
+                            ) : field.field_type === 'date' ? (
+                              <p className="text-gray-900">{formatShortDate(field.value)}</p>
+                            ) : (
+                              <p className="text-gray-900 italic">"{field.value}"</p>
+                            )}
+                          </div>
+                        ))}
+
+                      {/* Image fields */}
+                      {resourceGroup.dynamic
+                        .filter((f: any) => f.field_type === 'image' && f.value)
+                        .map((field: any) => (
+                          <div key={field.id}>
+                            <p className="text-xs text-gray-600 mb-1">{field.field_name}</p>
+                            <a
+                              href={`${API_BASE_URL}${field.value}?token=${localStorage.getItem('admin_token')}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-blue-600 hover:text-blue-700 text-xs"
+                            >
+                              View Image →
+                            </a>
+                          </div>
+                        ))}
+
+                      {/* Document fields */}
+                      {resourceGroup.dynamic
+                        .filter((f: any) => f.field_type === 'document' && f.value)
+                        .map((field: any) => (
+                          <div key={field.id}>
+                            <p className="text-xs text-gray-600 mb-1">{field.field_name}</p>
+                            <a
+                              href={`${API_BASE_URL}${field.value}?token=${localStorage.getItem('admin_token')}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-blue-600 hover:text-blue-700 text-xs"
+                            >
+                              Download →
+                            </a>
+                          </div>
+                        ))}
+                    </>
                   )}
-                  {resource.preferred_date && (
-                    <div>
-                      <p className="text-xs text-gray-600">Preferred Date</p>
-                      <p className="text-gray-900">{formatShortDate(resource.preferred_date)}</p>
-                    </div>
-                  )}
-                  {resource.whatsapp_number && (
-                    <div>
-                      <p className="text-xs text-gray-600">WhatsApp</p>
-                      <a 
-                        href={`https://wa.me/${resource.whatsapp_number.replace(/[^0-9]/g, '')}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-blue-600 hover:text-blue-700 inline-flex items-center"
-                      >
-                        {resource.whatsapp_number}
-                        <svg className="w-3 h-3 ml-1" fill="currentColor" viewBox="0 0 20 20">
-                          <path d="M11 3a1 1 0 100 2h2.586l-6.293 6.293a1 1 0 101.414 1.414L15 6.414V9a1 1 0 102 0V4a1 1 0 00-1-1h-5z" />
-                          <path d="M5 5a2 2 0 00-2 2v8a2 2 0 002 2h8a2 2 0 002-2v-3a1 1 0 10-2 0v3H5V7h3a1 1 0 000-2H5z" />
-                        </svg>
-                      </a>
-                    </div>
-                  )}
-                  {resource.candidate_photo && (
-                    <div>
-                      <p className="text-xs text-gray-600 mb-1">Candidate Photo</p>
-                      <a
-                        href={getFullImageUrl(resource.candidate_photo) || '#'}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-blue-600 hover:text-blue-700 text-xs"
-                        onClick={(e) => {
-                          if (!getFullImageUrl(resource.candidate_photo)) {
-                            e.preventDefault();
-                          }
-                        }}
-                      >
-                        View Photo →
-                      </a>
-                    </div>
-                  )}
-                  {resource.party_logo && (
-                    <div>
-                      <p className="text-xs text-gray-600 mb-1">Party Logo</p>
-                      <a
-                        href={getFullImageUrl(resource.party_logo) || '#'}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-blue-600 hover:text-blue-700 text-xs"
-                        onClick={(e) => {
-                          if (!getFullImageUrl(resource.party_logo)) {
-                            e.preventDefault();
-                          }
-                        }}
-                      >
-                        View Logo →
-                      </a>
-                    </div>
+
+                  {/* Static Resources (Legacy) */}
+                  {resourceGroup.static && (
+                    <>
+                      {resourceGroup.static.campaign_slogan && (
+                        <div>
+                          <p className="text-xs text-gray-600">Slogan</p>
+                          <p className="text-gray-900 italic">"{resourceGroup.static.campaign_slogan}"</p>
+                        </div>
+                      )}
+                      {resourceGroup.static.whatsapp_number && (
+                        <div>
+                          <p className="text-xs text-gray-600">WhatsApp</p>
+                          <a 
+                            href={`https://wa.me/${resourceGroup.static.whatsapp_number.replace(/[^0-9]/g, '')}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-blue-600 hover:text-blue-700 inline-flex items-center"
+                          >
+                            {resourceGroup.static.whatsapp_number}
+                            <svg className="w-3 h-3 ml-1" fill="currentColor" viewBox="0 0 20 20">
+                              <path d="M11 3a1 1 0 100 2h2.586l-6.293 6.293a1 1 0 101.414 1.414L15 6.414V9a1 1 0 102 0V4a1 1 0 00-1-1h-5z" />
+                              <path d="M5 5a2 2 0 00-2 2v8a2 2 0 002 2h8a2 2 0 002-2v-3a1 1 0 10-2 0v3H5V7h3a1 1 0 000-2H5z" />
+                            </svg>
+                          </a>
+                        </div>
+                      )}
+                    </>
                   )}
                 </div>
               ))

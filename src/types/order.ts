@@ -74,17 +74,27 @@ export interface OrderDetail extends AdminOrder {
   checklist?: OrderChecklist;
 }
 
-export interface OrderResource {
+export interface DynamicResourceField {
   id: number;
-  resource_type?: string;
-  file_url?: string;
-  candidate_photo?: string;
-  party_logo?: string;
-  campaign_slogan?: string;
-  preferred_date?: string;
-  whatsapp_number?: string;
-  additional_notes?: string;
+  field_name: string;
+  field_type: 'text' | 'image' | 'document' | 'date' | 'phone';
+  value: string;
+  file_name?: string;
   uploaded_at: string;
+}
+
+export interface StaticResource {
+  campaign_slogan?: string;
+  whatsapp_number?: string;
+  uploaded_at: string;
+}
+
+export interface OrderResource {
+  order_item_id: number;
+  item_name: string;
+  item_type: string;
+  dynamic?: DynamicResourceField[];
+  static?: StaticResource;
 }
 
 export interface StaffMember {

@@ -5,6 +5,7 @@ import { SidebarProvider } from './context/SidebarContext';
 import ToastContainer from './components/ui/ToastContainer';
 import UpdateNotification from './components/ui/UpdateNotification';
 import PWAInstallPrompt from './components/PWAInstallPrompt';
+import MobileOptimizedLayout from './components/layout/MobileOptimizedLayout';
 import LoginPage from './pages/LoginPage';
 import OrderListPage from './pages/OrderListPage';
 import OrderDetailPage from './pages/OrderDetailPage';
@@ -20,13 +21,14 @@ import RoleDashboard from './components/RoleDashboard';
 function App() {
   return (
     <Router>
-      <AuthProvider>
-        <ToastProvider>
-          <SidebarProvider>
-            <ToastContainer />
-            <UpdateNotification />
-            <PWAInstallPrompt variant="banner" />
-            <Routes>
+      <MobileOptimizedLayout>
+        <AuthProvider>
+          <ToastProvider>
+            <SidebarProvider>
+              <ToastContainer />
+              <UpdateNotification />
+              <PWAInstallPrompt variant="banner" />
+              <Routes>
           <Route path="/login" element={<LoginPage />} />
           <Route
             path="/"
@@ -101,10 +103,11 @@ function App() {
             }
           />
           <Route path="*" element={<Navigate to="/" replace />} />
-            </Routes>
-          </SidebarProvider>
-        </ToastProvider>
-      </AuthProvider>
+              </Routes>
+            </SidebarProvider>
+          </ToastProvider>
+        </AuthProvider>
+      </MobileOptimizedLayout>
     </Router>
   );
 }

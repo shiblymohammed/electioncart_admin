@@ -103,6 +103,20 @@ export default {
         '600': '600ms',
       },
 
+      // Mobile-specific spacing - Requirement 8.1, 8.2
+      spacing: {
+        'touch': '44px', // Minimum touch target size
+        'touch-sm': '36px', // Smaller touch target
+      },
+
+      // Mobile-optimized font sizes - Requirement 8.7
+      fontSize: {
+        'mobile-xs': ['0.75rem', { lineHeight: '1rem' }],
+        'mobile-sm': ['0.875rem', { lineHeight: '1.25rem' }],
+        'mobile-base': ['1rem', { lineHeight: '1.5rem' }], // 16px prevents iOS zoom
+        'mobile-lg': ['1.125rem', { lineHeight: '1.75rem' }],
+      },
+
       // Enables the 'glow' animation to use colors
       shadowColor: theme => ({
         ...theme('colors'),

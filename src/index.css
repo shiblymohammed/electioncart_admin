@@ -2,6 +2,7 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Mobile Optimizations - Requirement 8.1, 8.6, 8.7 */
 body {
   margin: 0;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
@@ -9,11 +10,48 @@ body {
     sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  
+  /* Requirement 8.6: Optimize for mobile - Prevent text size adjustment */
+  -webkit-text-size-adjust: 100%;
+  -moz-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+  
+  /* Requirement 8.7: Mobile-optimized typography */
+  font-size: 16px; /* Prevents zoom on iOS when focusing inputs */
 }
 
 code {
   font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
     monospace;
+}
+
+/* Requirement 8.2: Touch-friendly UI - Ensure minimum tap target size */
+@layer utilities {
+  .touch-target {
+    min-width: 44px;
+    min-height: 44px;
+  }
+  
+  .touch-target-sm {
+    min-width: 36px;
+    min-height: 36px;
+  }
+  
+  /* Requirement 8.2: Improve touch interactions */
+  .touch-manipulation {
+    touch-action: manipulation;
+  }
+  
+  /* Requirement 8.4: Optimize for mobile bandwidth - Reduce animations on slow connections */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
 }
 
 /* Custom animations for ProgressUpdate component */
@@ -66,4 +104,182 @@ code {
 
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
   background: #3b82f6;
+}
+
+/* Mobile-specific optimizations - Requirement 8.1, 8.2, 8.4 */
+@media (max-width: 767px) {
+  /* Requirement 8.7: Mobile-optimized typography */
+  body {
+    font-size: 16px; /* Prevents iOS zoom on input focus */
+  }
+  
+  /* Requirement 8.2: Larger tap targets on mobile */
+  button,
+  a,
+  input[type="button"],
+  input[type="submit"] {
+    min-height: 44px;
+  }
+  
+  /* Requirement 8.4: Optimize for mobile bandwidth - Reduce shadows */
+  .shadow-card,
+  .shadow-card-hover {
+    box-shadow: 0 2px 8px 0 rgba(0, 0, 0, 0.15);
+  }
+  
+  /* Requirement 8.1: Responsive design - Better spacing on mobile */
+  .container {
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+}
+
+/* Requirement 8.10: Support both portrait and landscape orientations */
+@media (orientation: landscape) and (max-height: 500px) {
+  /* Optimize for landscape mobile view */
+  .mobile-landscape-compact {
+    padding-top: 0.5rem;
+    padding-bottom: 0.5rem;
+  }
+}
+
+/* Requirement 8.4: Optimize images for mobile bandwidth */
+@media (max-width: 767px) {
+  img {
+    /* Enable browser-level lazy loading */
+    loading: lazy;
+  }
+}
+
+/* Requirement 8.2: Improve touch feedback */
+.touch-feedback {
+  -webkit-tap-highlight-color: rgba(59, 130, 246, 0.2);
+  tap-highlight-color: rgba(59, 130, 246, 0.2);
+}
+
+/* Requirement 8.2: Prevent text selection on interactive elements */
+.no-select {
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+}
+
+/* Requirement 8.4: Hardware acceleration for smoother animations on mobile */
+.gpu-accelerated {
+  transform: translateZ(0);
+  -webkit-transform: translateZ(0);
+  will-change: transform;
+}
+
+/* Requirement 8.1: Responsive container widths */
+@media (min-width: 320px) {
+  .container-responsive {
+    max-width: 100%;
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+}
+
+@media (min-width: 640px) {
+  .container-responsive {
+    max-width: 640px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+}
+
+@media (min-width: 768px) {
+  .container-responsive {
+    max-width: 768px;
+    padding-left: 1.5rem;
+    padding-right: 1.5rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  .container-responsive {
+    max-width: 1024px;
+  }
+}
+
+@media (min-width: 1280px) {
+  .container-responsive {
+    max-width: 1280px;
+  }
+}
+
+/* Requirement 8.2: Improve button touch feedback */
+button:active,
+a:active,
+.touch-active:active {
+  transform: scale(0.97);
+  transition: transform 0.1s ease;
+}
+
+/* Requirement 8.4: Optimize for slow networks - Reduce visual complexity */
+body.network-slow .shadow-glow-primary,
+body.network-slow .shadow-glow-accent {
+  box-shadow: none;
+}
+
+body.network-slow .animate-float-gentle,
+body.network-slow .animate-pulse-status {
+  animation: none;
+}
+
+/* Requirement 8.10: Landscape-specific optimizations */
+@media (orientation: landscape) and (max-height: 500px) {
+  .sidebar {
+    width: 60px !important;
+  }
+  
+  .topbar {
+    padding-top: 0.5rem;
+    padding-bottom: 0.5rem;
+  }
+}
+
+/* Requirement 8.2: Prevent double-tap zoom on buttons */
+button,
+a,
+input[type="button"],
+input[type="submit"],
+input[type="reset"] {
+  touch-action: manipulation;
+}
+
+/* Requirement 8.7: Prevent iOS input zoom */
+input[type="text"],
+input[type="email"],
+input[type="password"],
+input[type="number"],
+input[type="tel"],
+input[type="url"],
+textarea,
+select {
+  font-size: 16px !important;
+}
+
+/* Requirement 8.2: Better focus states for touch devices */
+body.touch-device button:focus,
+body.touch-device a:focus {
+  outline: 2px solid rgba(59, 130, 246, 0.5);
+  outline-offset: 2px;
+}
+
+/* Requirement 8.1: Safe area insets for notched devices */
+@supports (padding: max(0px)) {
+  body {
+    padding-left: max(0px, env(safe-area-inset-left));
+    padding-right: max(0px, env(safe-area-inset-right));
+  }
+  
+  .safe-area-top {
+    padding-top: max(0px, env(safe-area-inset-top));
+  }
+  
+  .safe-area-bottom {
+    padding-bottom: max(0px, env(safe-area-inset-bottom));
+  }
 }

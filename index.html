@@ -7,8 +7,24 @@
     <link rel="icon" type="image/x-icon" href="/favicon.ico" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     
-    <!-- Viewport -->
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <!-- Viewport - Requirement 8.3: Add viewport meta tags -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, viewport-fit=cover, user-scalable=yes" />
+    
+    <!-- Mobile Optimizations - Requirement 8.4: Optimize for mobile bandwidth -->
+    <!-- Preconnect to API domain for faster requests -->
+    <link rel="preconnect" href="https://electioncart-backend.onrender.com" crossorigin />
+    <link rel="dns-prefetch" href="https://electioncart-backend.onrender.com" />
+    
+    <!-- Disable automatic phone number detection -->
+    <meta name="format-detection" content="telephone=no" />
+    
+    <!-- iOS Web App Optimizations - Requirement 8.10: Support portrait and landscape -->
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    
+    <!-- Prevent text size adjustment on orientation change -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, viewport-fit=cover" />
     
     <!-- PWA Meta Tags -->
     <meta name="theme-color" content="#0D1117" />
@@ -18,11 +34,6 @@
     <!-- Apple Touch Icons -->
     <link rel="apple-touch-icon" sizes="152x152" href="/icons/icon-152x152.png" />
     <link rel="apple-touch-icon" sizes="192x192" href="/icons/icon-192x192.png" />
-    
-    <!-- Apple Mobile Web App -->
-    <meta name="apple-mobile-web-app-capable" content="yes" />
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-    <meta name="apple-mobile-web-app-title" content="EC Admin" />
     
     <!-- Microsoft Tiles -->
     <meta name="msapplication-TileColor" content="#0D1117" />

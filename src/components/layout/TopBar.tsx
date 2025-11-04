@@ -28,11 +28,11 @@ const TopBar = ({ breadcrumbs = [], className = '' }: TopBarProps) => {
       <div className="flex items-center justify-between px-4 py-3 gap-4">
         {/* Left section */}
         <div className="flex items-center gap-4 flex-1 min-w-0">
-          {/* Mobile menu button */}
+          {/* Mobile menu button - Requirement 8.2: Touch-friendly UI */}
           {isMobile && (
             <button
               onClick={openMobileSidebar}
-              className="p-2 rounded-lg hover:bg-dark-hover transition-colors text-text-muted hover:text-text"
+              className="p-2 rounded-lg hover:bg-dark-hover transition-colors text-text-muted hover:text-text min-w-[44px] min-h-[44px] flex items-center justify-center touch-manipulation active:scale-95"
               aria-label="Open menu"
             >
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -66,11 +66,11 @@ const TopBar = ({ breadcrumbs = [], className = '' }: TopBarProps) => {
           {/* Notifications */}
           <NotificationBell />
 
-          {/* User menu */}
+          {/* User menu - Requirement 8.2: Touch-friendly UI */}
           <div className="relative">
             <button
               onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
-              className="flex items-center gap-2 p-2 rounded-lg hover:bg-dark-hover transition-colors"
+              className="flex items-center gap-2 p-2 rounded-lg hover:bg-dark-hover transition-colors min-h-[44px] touch-manipulation active:scale-95"
               aria-label="User menu"
             >
               <div className="w-8 h-8 rounded-full bg-gradient-primary flex items-center justify-center text-white font-semibold text-sm">

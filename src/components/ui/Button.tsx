@@ -22,8 +22,8 @@ const Button = ({
   disabled,
   ...props
 }: ButtonProps) => {
-  // Base styles
-  const baseStyles = 'inline-flex items-center justify-center font-medium rounded-btn transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-dark disabled:opacity-50 disabled:cursor-not-allowed';
+  // Base styles - Requirement 8.2: Touch-friendly UI with minimum tap target size
+  const baseStyles = 'inline-flex items-center justify-center font-medium rounded-btn transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-dark disabled:opacity-50 disabled:cursor-not-allowed touch-manipulation active:scale-95';
 
   // Variant styles
   const variantStyles = {
@@ -34,11 +34,11 @@ const Button = ({
     ghost: 'bg-transparent border border-dark-border text-text hover:bg-dark-hover focus:ring-primary',
   };
 
-  // Size styles
+  // Size styles - Requirement 8.2: Ensure minimum 44x44px touch targets
   const sizeStyles = {
-    sm: 'px-3 py-1.5 text-sm gap-1.5',
-    md: 'px-4 py-2 text-base gap-2',
-    lg: 'px-6 py-3 text-lg gap-2.5',
+    sm: 'px-3 py-2 text-sm gap-1.5 min-h-[36px]', // Slightly smaller but still touch-friendly
+    md: 'px-4 py-2.5 text-base gap-2 min-h-[44px]', // Standard touch target
+    lg: 'px-6 py-3 text-lg gap-2.5 min-h-[48px]', // Larger touch target
   };
 
   // Width styles

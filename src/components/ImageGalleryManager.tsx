@@ -5,6 +5,7 @@ import { CSS } from '@dnd-kit/utilities';
 import { ProductImage } from '../types/product';
 import { useToast } from '../hooks/useToast';
 import DeleteConfirmDialog from './ui/DeleteConfirmDialog';
+import OptimizedImage from './ui/OptimizedImage';
 import {
   getProductImages,
   uploadProductImage,
@@ -78,8 +79,8 @@ function SortableImageCard({
         </div>
       )}
 
-      {/* Image Preview */}
-      <img
+      {/* Image Preview - Requirement 8.4: Optimize images with lazy loading */}
+      <OptimizedImage
         src={image.thumbnail || image.image}
         alt={image.alt_text || 'Product image'}
         className="w-full h-48 object-cover"
