@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="384" height="384" viewBox="0 0 384 384" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background -->
+  <rect width="384" height="384" fill="#0D1117" rx="57.599999999999994"/>
+  
+  <!-- Icon Design - Shopping Cart with Checkmark -->
+  <g transform="translate(76.80000000000001, 76.80000000000001)">
+    <!-- Cart -->
+    <path d="M 38.400000000000006 57.599999999999994 L 57.599999999999994 134.39999999999998 L 172.8 134.39999999999998 L 192 57.599999999999994 Z" 
+          fill="none" stroke="#58A6FF" stroke-width="11.52" stroke-linecap="round" stroke-linejoin="round"/>
+    
+    <!-- Cart wheels -->
+    <circle cx="76.80000000000001" cy="161.28" r="9.600000000000001" fill="#58A6FF"/>
+    <circle cx="153.60000000000002" cy="161.28" r="9.600000000000001" fill="#58A6FF"/>
+    
+    <!-- Checkmark -->
+    <path d="M 57.599999999999994 96 L 96 122.88 L 161.28 69.12" 
+          fill="none" stroke="#3FB950" stroke-width="15.36" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+  
+  <!-- Text -->
+  <text x="192" y="307.20000000000005" 
+        font-family="Arial, sans-serif" 
+        font-size="46.08" 
+        font-weight="bold" 
+        fill="#58A6FF" 
+        text-anchor="middle">EC</text>
+</svg>

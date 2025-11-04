@@ -1,9 +1,11 @@
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { getOrderStatistics, getOrders } from '../services/adminService';
 import { OrderStatistics, AdminOrder } from '../types/order';
 import { useToast } from '../hooks/useToast';
+import { useCachedData } from '../hooks/useCachedData';
+import { CACHE_KEYS, CACHE_DURATION } from '../utils/cacheManager';
 import AppLayout from '../components/layout/AppLayout';
 import PageHeader from '../components/layout/PageHeader';
 import StatCard from '../components/ui/StatCard';
@@ -12,39 +14,55 @@ import Badge from '../components/ui/Badge';
 import LoadingSpinner from '../components/ui/LoadingSpinner';
 import EmptyState from '../components/ui/EmptyState';
 import Button from '../components/ui/Button';
+import StaleDataIndicator from '../components/ui/StaleDataIndicator';
 import { formatDate, formatCurrency, formatStatus } from '../utils/formatters';
 
 const AdminDashboard = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const { showError } = useToast();
-  const [statistics, setStatistics] = useState<OrderStatistics | null>(null);
-  const [recentOrders, setRecentOrders] = useState<AdminOrder[]>([]);
-  const [loading, setLoading] = useState(true);
 
+  // Use cached data for statistics
+  const {
+    data: statistics,
+    loading: statsLoading,
+    error: statsError,
+    cacheStatus: statsCacheStatus,
+    refresh: refreshStats,
+  } = useCachedData<OrderStatistics>(
+    CACHE_KEYS.DASHBOARD_STATS,
+    getOrderStatistics,
+    CACHE_DURATION.DASHBOARD
+  );
+
+  // Use cached data for orders
+  const {
+    data: allOrders,
+    loading: ordersLoading,
+    error: ordersError,
+    cacheStatus: ordersCacheStatus,
+    refresh: refreshOrders,
+  } = useCachedData<AdminOrder[]>(
+    CACHE_KEYS.ORDERS,
+    getOrders,
+    CACHE_DURATION.ORDERS
+  );
+
+  const loading = statsLoading || ordersLoading;
+  const recentOrders = allOrders?.slice(0, 5) || [];
+
+  // Show errors if any
   useEffect(() => {
-    fetchDashboardData();
-  }, []);
+    if (statsError) {
+      showError(statsError);
+    }
+    if (ordersError) {
+      showError(ordersError);
+    }
+  }, [statsError, ordersError, showError]);
 
   const fetchDashboardData = async () => {
-    try {
-      setLoading(true);
-
-      // Fetch statistics and recent orders in parallel
-      const [stats, orders] = await Promise.all([
-        getOrderStatistics(),
-        getOrders(),
-      ]);
-
-      setStatistics(stats);
-      // Get the 5 most recent orders
-      setRecentOrders(orders.slice(0, 5));
-    } catch (err: any) {
-      console.error('Error fetching dashboard data:', err);
-      showError(err.response?.data?.error?.message || 'Failed to load dashboard data');
-    } finally {
-      setLoading(false);
-    }
+    await Promise.all([refreshStats(), refreshOrders()]);
   };
 
   const getStatusBadgeVariant = (status: string) => {
@@ -83,17 +101,22 @@ const AdminDashboard = () => {
         title="Dashboard"
         subtitle={`Welcome back, ${user?.username || 'Admin'}`}
         actions={
-          <Button
-            variant="ghost"
-            leftIcon={
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-              </svg>
-            }
-            onClick={fetchDashboardData}
-          >
-            Refresh
-          </Button>
+          <div className="flex items-center gap-3">
+            {(statsCacheStatus || ordersCacheStatus) && (
+              <StaleDataIndicator cacheStatus={statsCacheStatus || ordersCacheStatus} />
+            )}
+            <Button
+              variant="ghost"
+              leftIcon={
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                </svg>
+              }
+              onClick={fetchDashboardData}
+            >
+              Refresh
+            </Button>
+          </div>
         }
       />
 

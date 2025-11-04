@@ -3,6 +3,7 @@ import { useSidebar } from '../../context/SidebarContext';
 import { useIsMobile } from '../../hooks/useMediaQuery';
 import Sidebar from './Sidebar';
 import TopBar from './TopBar';
+import OfflineIndicator from '../ui/OfflineIndicator';
 import { BreadcrumbItem } from '../../types/ui.types';
 
 interface AppLayoutProps {
@@ -20,6 +21,9 @@ const AppLayout = ({ children, breadcrumbs = [], className = '' }: AppLayoutProp
 
   return (
     <div className="min-h-screen bg-dark">
+      {/* Offline Indicator - Fixed at top */}
+      <OfflineIndicator />
+
       {/* Sidebar */}
       <Sidebar />
 

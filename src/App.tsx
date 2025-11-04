@@ -3,6 +3,9 @@ import { AuthProvider } from './context/AuthContext';
 import { ToastProvider } from './context/ToastContext';
 import { SidebarProvider } from './context/SidebarContext';
 import ToastContainer from './components/ui/ToastContainer';
+import OfflineIndicator from './components/ui/OfflineIndicator';
+import UpdateNotification from './components/ui/UpdateNotification';
+import PWAInstallPrompt from './components/PWAInstallPrompt';
 import LoginPage from './pages/LoginPage';
 import OrderListPage from './pages/OrderListPage';
 import OrderDetailPage from './pages/OrderDetailPage';
@@ -21,7 +24,10 @@ function App() {
       <AuthProvider>
         <ToastProvider>
           <SidebarProvider>
+            <OfflineIndicator />
             <ToastContainer />
+            <UpdateNotification />
+            <PWAInstallPrompt variant="banner" />
             <Routes>
           <Route path="/login" element={<LoginPage />} />
           <Route

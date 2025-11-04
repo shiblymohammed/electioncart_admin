@@ -6,6 +6,8 @@ import { useIsMobile } from '../../hooks/useMediaQuery';
 import Breadcrumbs from './Breadcrumbs';
 import GlobalSearch from './GlobalSearch';
 import NotificationBell from './NotificationBell';
+import PWAInstallPrompt from '../PWAInstallPrompt';
+import CacheStatusDisplay from '../ui/CacheStatusDisplay';
 import { BreadcrumbItem } from '../../types/ui.types';
 
 interface TopBarProps {
@@ -54,6 +56,12 @@ const TopBar = ({ breadcrumbs = [], className = '' }: TopBarProps) => {
         <div className="flex items-center gap-2">
           {/* Global Search */}
           {!isMobile && <GlobalSearch />}
+
+          {/* Cache Status */}
+          {!isMobile && <CacheStatusDisplay />}
+
+          {/* PWA Install Button */}
+          <PWAInstallPrompt variant="button" />
 
           {/* Notifications */}
           <NotificationBell />

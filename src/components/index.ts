@@ -16,3 +16,4 @@ export { default as ImageGalleryManager } from './ImageGalleryManager';
 export { default as RevenueChart } from './RevenueChart';
 export { default as TopProductsTable } from './TopProductsTable';
 export { default as StaffPerformanceTable } from './StaffPerformanceTable';
+export { default as PWAInstallPrompt } from './PWAInstallPrompt';

@@ -5,3 +5,4 @@
 export * from './animations';
 export * from './formatters';
 export * from './constants';
+export * from './pwaAnalytics';

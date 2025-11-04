@@ -5,6 +5,8 @@ import { getOrders, getStaffMembers } from '../services/adminService';
 import { getAssignedOrders } from '../services/staffService';
 import { AdminOrder, StaffMember } from '../types/order';
 import { useToast } from '../hooks/useToast';
+import { useCachedData } from '../hooks/useCachedData';
+import { CACHE_KEYS, CACHE_DURATION } from '../utils/cacheManager';
 import AppLayout from '../components/layout/AppLayout';
 import PageHeader from '../components/layout/PageHeader';
 import Card from '../components/ui/Card';
@@ -12,6 +14,7 @@ import Badge from '../components/ui/Badge';
 import LoadingSpinner from '../components/ui/LoadingSpinner';
 import EmptyState from '../components/ui/EmptyState';
 import Button from '../components/ui/Button';
+import StaleDataIndicator from '../components/ui/StaleDataIndicator';
 import OrderCard from '../components/features/orders/OrderCard';
 import OrderFilters, { FilterValues } from '../components/features/orders/OrderFilters';
 import BulkActionBar from '../components/features/orders/BulkActionBar';
@@ -22,10 +25,7 @@ const OrderListPage = () => {
   const { user } = useAuth();
   const { showError } = useToast();
   const [searchParams] = useSearchParams();
-  const [orders, setOrders] = useState<AdminOrder[]>([]);
   const [filteredOrders, setFilteredOrders] = useState<AdminOrder[]>([]);
-  const [staffMembers, setStaffMembers] = useState<StaffMember[]>([]);
-  const [loading, setLoading] = useState(true);
   const [viewMode, setViewMode] = useState<'table' | 'grid' | 'kanban'>('table');
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [isBulkMode, setIsBulkMode] = useState(false);
@@ -39,52 +39,71 @@ const OrderListPage = () => {
     maxAmount: 0,
   });
 
-  useEffect(() => {
-    if (user) {
-      fetchData();
-    }
-  }, [user, searchParams]);
+  // Determine cache key based on user role
+  const ordersCacheKey = user?.role === 'staff' ? CACHE_KEYS.ASSIGNED_ORDERS : CACHE_KEYS.ORDERS;
 
-  const fetchData = async () => {
-    try {
-      setLoading(true);
-
+  // Use cached data for orders
+  const {
+    data: orders,
+    loading: ordersLoading,
+    error: ordersError,
+    cacheStatus: ordersCacheStatus,
+    refresh: refreshOrders,
+  } = useCachedData<AdminOrder[]>(
+    ordersCacheKey,
+    async () => {
       if (user?.role === 'staff') {
         const params: any = {};
         const status = searchParams.get('status');
         if (status) params.status = status;
-
-        const ordersData = await getAssignedOrders(params);
-        setOrders(ordersData);
-        setStaffMembers([]);
+        return await getAssignedOrders(params);
       } else {
         const params: any = {};
         const status = searchParams.get('status');
         const staff = searchParams.get('staff');
         const search = searchParams.get('search');
-
         if (status) params.status = status;
         if (staff) params.assigned_to = staff;
         if (search) params.search = search;
-
-        const [ordersData, staffData] = await Promise.all([
-          getOrders(params),
-          getStaffMembers(),
-        ]);
-
-        setOrders(ordersData);
-        setFilteredOrders(ordersData);
-        setStaffMembers(staffData);
+        return await getOrders(params);
       }
-    } catch (err: any) {
-      console.error('Error fetching data:', err);
-      showError(err.response?.data?.error?.message || 'Failed to load orders');
-    } finally {
-      setLoading(false);
+    },
+    CACHE_DURATION.ORDERS
+  );
+
+  // Use cached data for staff (admin only)
+  const {
+    data: staffMembers,
+    loading: staffLoading,
+  } = useCachedData<StaffMember[]>(
+    CACHE_KEYS.STAFF_LIST,
+    getStaffMembers,
+    CACHE_DURATION.STAFF
+  );
+
+  const loading = ordersLoading || (user?.role !== 'staff' && staffLoading);
+
+  // Update filtered orders when orders change
+  useEffect(() => {
+    if (orders) {
+      setFilteredOrders(orders);
     }
+  }, [orders]);
+
+  // Show errors if any
+  useEffect(() => {
+    if (ordersError) {
+      showError(ordersError);
+    }
+  }, [ordersError, showError]);
+
+  const fetchData = async () => {
+    await refreshOrders();
   };
 
   const applyFilters = (filters: FilterValues) => {
+    if (!orders) return;
+    
     let filtered = [...orders];
 
     // Filter by status
@@ -120,7 +139,9 @@ const OrderListPage = () => {
   };
 
   const clearFilters = () => {
-    setFilteredOrders(orders);
+    if (orders) {
+      setFilteredOrders(orders);
+    }
     setActiveFilters({
       statuses: [],
       dateFrom: '',
@@ -250,9 +271,12 @@ const OrderListPage = () => {
     <AppLayout breadcrumbs={[{ label: 'Orders' }]}>
       <PageHeader
         title={user?.role === 'staff' ? 'My Assigned Orders' : 'Orders'}
-        subtitle={`${filteredOrders.length} of ${orders.length} orders`}
+        subtitle={`${filteredOrders.length} of ${orders?.length || 0} orders`}
         actions={
           <div className="flex gap-2">
+            {ordersCacheStatus && (
+              <StaleDataIndicator cacheStatus={ordersCacheStatus} />
+            )}
             <Button
               variant={isBulkMode ? 'primary' : 'ghost'}
               onClick={() => {
@@ -435,7 +459,7 @@ const OrderListPage = () => {
           onExport={handleBulkExport}
           onCancel={handleBulkCancel}
           onClearSelection={() => setSelectedOrderIds(new Set())}
-          staffMembers={staffMembers}
+          staffMembers={staffMembers || []}
         />
       )}
     </AppLayout>

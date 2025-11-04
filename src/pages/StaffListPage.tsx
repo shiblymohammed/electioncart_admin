@@ -1,34 +1,38 @@
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { getStaffMembers } from '../services/adminService';
 import { StaffMember } from '../types/order';
 import { useToast } from '../hooks/useToast';
+import { useCachedData } from '../hooks/useCachedData';
+import { CACHE_KEYS, CACHE_DURATION } from '../utils/cacheManager';
 import AppLayout from '../components/layout/AppLayout';
 import PageHeader from '../components/layout/PageHeader';
 import LoadingSpinner from '../components/ui/LoadingSpinner';
 import EmptyState from '../components/ui/EmptyState';
+import StaleDataIndicator from '../components/ui/StaleDataIndicator';
 import StaffCard from '../components/features/staff/StaffCard';
 
 const StaffListPage = () => {
   const { showError } = useToast();
-  const [staff, setStaff] = useState<StaffMember[]>([]);
-  const [loading, setLoading] = useState(true);
 
+  // Use cached data for staff
+  const {
+    data: staff,
+    loading,
+    error,
+    cacheStatus,
+    refresh: fetchStaff,
+  } = useCachedData<StaffMember[]>(
+    CACHE_KEYS.STAFF_LIST,
+    getStaffMembers,
+    CACHE_DURATION.STAFF
+  );
+
+  // Show errors if any
   useEffect(() => {
-    fetchStaff();
-  }, []);
-
-  const fetchStaff = async () => {
-    try {
-      setLoading(true);
-      const staffData = await getStaffMembers();
-      setStaff(staffData);
-    } catch (err: any) {
-      console.error('Error fetching staff:', err);
-      showError('Failed to load staff members');
-    } finally {
-      setLoading(false);
+    if (error) {
+      showError(error);
     }
-  };
+  }, [error, showError]);
 
   if (loading) {
     return (
@@ -47,10 +51,15 @@ const StaffListPage = () => {
     <AppLayout breadcrumbs={[{ label: 'Staff' }]}>
       <PageHeader
         title="Staff Management"
-        subtitle={`${staff.length} staff members`}
+        subtitle={`${staff?.length || 0} staff members`}
+        actions={
+          <div className="flex items-center gap-3">
+            {cacheStatus && <StaleDataIndicator cacheStatus={cacheStatus} />}
+          </div>
+        }
       />
 
-      {staff.length === 0 ? (
+      {!staff || staff.length === 0 ? (
         <EmptyState
           title="No staff members"
           message="Staff members will appear here once added"

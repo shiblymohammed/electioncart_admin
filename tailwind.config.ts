@@ -142,6 +142,11 @@ export default {
           '0%, 100%': { transform: 'translateY(0px)' },
           '50%': { transform: 'translateY(-6px)' },
         },
+        // Slide up animation for banners
+        'slide-up': {
+          '0%': { transform: 'translateY(100%)', opacity: '0' },
+          '100%': { transform: 'translateY(0)', opacity: '1' },
+        },
       },
 
       // Custom Animations mapping keyframes to utilities
@@ -149,6 +154,7 @@ export default {
         'fade-in-up': 'fade-in-up 0.5s ease-out forwards',
         'fade-in': 'fade-in 0.3s ease-out forwards',
         'slide-in-right': 'slide-in-right 0.3s ease-out forwards',
+        'slide-up': 'slide-up 0.4s ease-out forwards',
         'pulse-status': 'pulse-subtle 2s cubic-bezier(0.4, 0, 0.6, 1) infinite',
         'glow-accent': 'glow 2.5s ease-in-out infinite', // Use with `shadow-accent`
         'glow-primary': 'glow 2.5s ease-in-out infinite', // Use with `shadow-primary`
