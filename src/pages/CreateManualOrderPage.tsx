@@ -19,8 +19,10 @@ import {
   ProductForOrder,
   OrderSource,
   PaymentMethod,
+  PaymentStatus,
   OrderPriority,
   CustomerSearchResult,
+  CreateManualOrderRequest,
 } from '../types/manualOrder';
 import { StaffMember } from '../types/order';
 
@@ -56,7 +58,7 @@ const CreateManualOrderPage = () => {
 
   // Step 3: Order Details
   const [orderSource, setOrderSource] = useState<OrderSource>('phone_call');
-  const [paymentStatus, setPaymentStatus] = useState<'pending' | 'partial' | 'paid'>('pending');
+  const [paymentStatus, setPaymentStatus] = useState<PaymentStatus>('unpaid');
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('cash');
   const [paymentAmount, setPaymentAmount] = useState<string>('');
   const [paymentReference, setPaymentReference] = useState('');
@@ -191,17 +193,18 @@ const CreateManualOrderPage = () => {
             email: selectedCustomer!.email,
           };
 
-      const orderData = {
+      const orderData: CreateManualOrderRequest = {
         customer,
         items: cart.map(item => ({
           product_type: item.product_type,
           product_id: item.product_id,
           quantity: item.quantity,
+          price: item.price,
         })),
         order_source: orderSource,
         payment_status: paymentStatus,
-        payment_method: paymentStatus !== 'pending' ? paymentMethod : undefined,
-        payment_amount: paymentStatus !== 'pending' ? parseFloat(paymentAmount) : undefined,
+        payment_method: paymentStatus !== 'unpaid' ? paymentMethod : undefined,
+        payment_amount: paymentStatus !== 'unpaid' ? parseFloat(paymentAmount) : undefined,
         payment_reference: paymentReference || undefined,
         assigned_to: assignedStaff || undefined,
         priority,
@@ -503,16 +506,18 @@ const CreateManualOrderPage = () => {
           </label>
           <select
             value={paymentStatus}
-            onChange={(e) => setPaymentStatus(e.target.value as any)}
+            onChange={(e) => setPaymentStatus(e.target.value as PaymentStatus)}
             className="w-full bg-dark-bg border border-dark-border rounded-lg p-3 text-text focus:ring-2 focus:ring-primary focus:border-transparent"
           >
-            <option value="pending">Pending</option>
+            <option value="unpaid">Unpaid</option>
             <option value="partial">Partial Payment</option>
-            <option value="paid">Paid</option>
+            <option value="paid">Fully Paid</option>
+            <option value="cod">Cash on Delivery</option>
+            <option value="refunded">Refunded</option>
           </select>
         </div>
 
-        {paymentStatus !== 'pending' && (
+        {paymentStatus !== 'unpaid' && (
           <>
             <div>
               <label className="block text-sm font-medium text-text-muted mb-2">

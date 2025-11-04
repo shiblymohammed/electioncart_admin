@@ -13,7 +13,6 @@ import Card from '../components/ui/Card';
 import Badge from '../components/ui/Badge';
 import LoadingSpinner from '../components/ui/LoadingSpinner';
 import EmptyState from '../components/ui/EmptyState';
-import Button from '../components/ui/Button';
 import StaleDataIndicator from '../components/ui/StaleDataIndicator';
 import OrderCard from '../components/features/orders/OrderCard';
 import OrderFilters, { FilterValues } from '../components/features/orders/OrderFilters';
