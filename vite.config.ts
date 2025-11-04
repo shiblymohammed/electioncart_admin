@@ -270,6 +270,7 @@ export default defineConfig({
     target: 'esnext',
     minify: 'terser',
     cssMinify: true,
+    sourcemap: false,
     rollupOptions: {
       output: {
         manualChunks: (id) => {
@@ -288,5 +289,7 @@ export default defineConfig({
         }
       }
     }
-  }
+  },
+  // Ensure base path is correct for deployment
+  base: '/'
 })

@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Health Check - Election Cart Admin</title>
+    <style>
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #0D1117;
+            color: #fff;
+        }
+        .status { padding: 20px; margin: 10px 0; border-radius: 8px; }
+        .success { background: #1a472a; border: 1px solid #2ea043; }
+        .error { background: #4a1a1a; border: 1px solid #da3633; }
+        .info { background: #1a3a4a; border: 1px solid #2188ff; }
+        pre { background: #161b22; padding: 15px; border-radius: 6px; overflow-x: auto; }
+        h1 { color: #58a6ff; }
+        h2 { color: #79c0ff; margin-top: 30px; }
+    </style>
+</head>
+<body>
+    <h1>🏥 Election Cart Admin - Health Check</h1>
+    
+    <div class="status success">
+        <strong>✅ Static Files Deployed Successfully</strong>
+        <p>If you can see this page, your static files are being served correctly.</p>
+    </div>
+
+    <h2>Environment Check</h2>
+    <div id="env-check"></div>
+
+    <h2>API Connection Test</h2>
+    <div id="api-check"></div>
+
+    <h2>Browser Information</h2>
+    <div class="status info">
+        <pre id="browser-info"></pre>
+    </div>
+
+    <h2>Console Errors</h2>
+    <div id="console-errors"></div>
+
+    <script>
+        // Browser info
+        document.getElementById('browser-info').textContent = JSON.stringify({
+            userAgent: navigator.userAgent,
+            platform: navigator.platform,
+            language: navigator.language,
+            online: navigator.onLine,
+            cookieEnabled: navigator.cookieEnabled,
+            url: window.location.href
+        }, null, 2);
+
+        // Environment variables check (these should be undefined in this static file)
+        const envVars = {
+            'VITE_API_BASE_URL': typeof import.meta !== 'undefined' ? 'Vite detected' : 'Not available',
+            'Current Origin': window.location.origin
+        };
+        
+        const envDiv = document.getElementById('env-check');
+        envDiv.innerHTML = '<div class="status info"><pre>' + JSON.stringify(envVars, null, 2) + '</pre></div>';
+
+        // API connection test
+        const apiUrl = 'https://electioncart-backend.onrender.com/api/health/';
+        
+        fetch(apiUrl)
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById('api-check').innerHTML = 
+                    '<div class="status success"><strong>✅ API Connected</strong><pre>' + 
+                    JSON.stringify(data, null, 2) + '</pre></div>';
+            })
+            .catch(error => {
+                document.getElementById('api-check').innerHTML = 
+                    '<div class="status error"><strong>❌ API Connection Failed</strong><p>' + 
+                    error.message + '</p><p>URL: ' + apiUrl + '</p></div>';
+            });
+
+        // Capture console errors
+        const errors = [];
+        const originalError = console.error;
+        console.error = function(...args) {
+            errors.push(args.join(' '));
+            originalError.apply(console, args);
+        };
+
+        setTimeout(() => {
+            const errorsDiv = document.getElementById('console-errors');
+            if (errors.length === 0) {
+                errorsDiv.innerHTML = '<div class="status success"><strong>✅ No Console Errors</strong></div>';
+            } else {
+                errorsDiv.innerHTML = '<div class="status error"><strong>❌ Console Errors Found</strong><pre>' + 
+                    errors.join('\n') + '</pre></div>';
+            }
+        }, 2000);
+    </script>
+
+    <h2>Next Steps</h2>
+    <div class="status info">
+        <p><strong>If you see this page but the main app shows a blank screen:</strong></p>
+        <ol>
+            <li>Check browser console for JavaScript errors (F12)</li>
+            <li>Verify environment variables are set in your hosting platform</li>
+            <li>Ensure VITE_API_BASE_URL is set correctly</li>
+            <li>Check that Firebase configuration is correct</li>
+            <li>Try accessing <a href="/" style="color: #58a6ff;">/</a> (main app)</li>
+        </ol>
+        
+        <p><strong>Common Issues:</strong></p>
+        <ul>
+            <li>Missing VITE_* environment variables in hosting platform</li>
+            <li>CORS issues with backend API</li>
+            <li>Firebase configuration errors</li>
+            <li>JavaScript errors preventing React from mounting</li>
+        </ul>
+    </div>
+</body>
+</html>
