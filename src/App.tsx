@@ -3,7 +3,6 @@ import { AuthProvider } from './context/AuthContext';
 import { ToastProvider } from './context/ToastContext';
 import { SidebarProvider } from './context/SidebarContext';
 import ToastContainer from './components/ui/ToastContainer';
-import OfflineIndicator from './components/ui/OfflineIndicator';
 import UpdateNotification from './components/ui/UpdateNotification';
 import PWAInstallPrompt from './components/PWAInstallPrompt';
 import LoginPage from './pages/LoginPage';
@@ -24,7 +23,6 @@ function App() {
       <AuthProvider>
         <ToastProvider>
           <SidebarProvider>
-            <OfflineIndicator />
             <ToastContainer />
             <UpdateNotification />
             <PWAInstallPrompt variant="banner" />
