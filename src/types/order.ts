@@ -28,6 +28,9 @@ export interface AdminOrder {
   };
   total_amount: number;
   status: string;
+  payment_status?: 'unpaid' | 'partial' | 'paid' | 'refunded' | 'cod';
+  total_paid?: number;
+  payment_balance?: number;
   assigned_to?: {
     id: number;
     name?: string;

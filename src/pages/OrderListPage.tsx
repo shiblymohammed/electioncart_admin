@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
+import { useEffect, useState, useCallback } from 'react';
+import { Link, useSearchParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { getOrders, getStaffMembers } from '../services/adminService';
 import { getAssignedOrders } from '../services/staffService';
@@ -19,12 +19,17 @@ import OrderCard from '../components/features/orders/OrderCard';
 import OrderFilters, { FilterValues } from '../components/features/orders/OrderFilters';
 import BulkActionBar from '../components/features/orders/BulkActionBar';
 import OrderKanban from '../components/features/orders/OrderKanban';
+import OrderListActions from '../components/features/orders/OrderListActions';
+import PaymentStatusDropdown from '../components/PaymentStatusDropdown';
+import PaymentStatusBadge from '../components/PaymentStatusBadge';
+import { PaymentStatus } from '../types/manualOrder';
 import { formatDate, formatCurrency, formatStatus } from '../utils/formatters';
 
 const OrderListPage = () => {
   const { user } = useAuth();
   const { showError } = useToast();
   const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
   const [filteredOrders, setFilteredOrders] = useState<AdminOrder[]>([]);
   const [viewMode, setViewMode] = useState<'table' | 'grid' | 'kanban'>('table');
   const [isFilterOpen, setIsFilterOpen] = useState(false);
@@ -42,6 +47,25 @@ const OrderListPage = () => {
   // Determine cache key based on user role
   const ordersCacheKey = user?.role === 'staff' ? CACHE_KEYS.ASSIGNED_ORDERS : CACHE_KEYS.ORDERS;
 
+  // Memoize the fetch function to prevent infinite loops
+  const fetchOrders = useCallback(async () => {
+    if (user?.role === 'staff') {
+      const params: any = {};
+      const status = searchParams.get('status');
+      if (status) params.status = status;
+      return await getAssignedOrders(params);
+    } else {
+      const params: any = {};
+      const status = searchParams.get('status');
+      const staff = searchParams.get('staff');
+      const search = searchParams.get('search');
+      if (status) params.status = status;
+      if (staff) params.assigned_to = staff;
+      if (search) params.search = search;
+      return await getOrders(params);
+    }
+  }, [user?.role, searchParams]);
+
   // Use cached data for orders
   const {
     data: orders,
@@ -51,23 +75,7 @@ const OrderListPage = () => {
     refresh: refreshOrders,
   } = useCachedData<AdminOrder[]>(
     ordersCacheKey,
-    async () => {
-      if (user?.role === 'staff') {
-        const params: any = {};
-        const status = searchParams.get('status');
-        if (status) params.status = status;
-        return await getAssignedOrders(params);
-      } else {
-        const params: any = {};
-        const status = searchParams.get('status');
-        const staff = searchParams.get('staff');
-        const search = searchParams.get('search');
-        if (status) params.status = status;
-        if (staff) params.assigned_to = staff;
-        if (search) params.search = search;
-        return await getOrders(params);
-      }
-    },
+    fetchOrders,
     CACHE_DURATION.ORDERS
   );
 
@@ -272,86 +280,23 @@ const OrderListPage = () => {
       <PageHeader
         title={user?.role === 'staff' ? 'My Assigned Orders' : 'Orders'}
         subtitle={`${filteredOrders.length} of ${orders?.length || 0} orders`}
+        mobileLayout="stack"
         actions={
-          <div className="flex gap-2">
-            {ordersCacheStatus && (
-              <StaleDataIndicator cacheStatus={ordersCacheStatus} />
-            )}
-            <Button
-              variant={isBulkMode ? 'primary' : 'ghost'}
-              onClick={() => {
-                setIsBulkMode(!isBulkMode);
-                setSelectedOrderIds(new Set());
-              }}
-              leftIcon={
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
-                </svg>
-              }
-            >
-              {isBulkMode ? 'Exit Bulk' : 'Bulk Select'}
-            </Button>
-            <Button
-              variant="ghost"
-              onClick={() => setIsFilterOpen(true)}
-              leftIcon={
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
-                </svg>
-              }
-            >
-              Filters
-              {getActiveFilterCount() > 0 && (
-                <span className="ml-2 px-2 py-0.5 bg-primary text-white text-xs rounded-full">
-                  {getActiveFilterCount()}
-                </span>
-              )}
-            </Button>
-            <div className="flex gap-1 bg-dark-hover rounded-lg p-1">
-              <button
-                onClick={() => setViewMode('table')}
-                className={`px-3 py-1.5 rounded-md transition-colors ${
-                  viewMode === 'table' 
-                    ? 'bg-primary text-white' 
-                    : 'text-text-muted hover:text-text'
-                }`}
-                title="Table View"
-              >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 10h16M4 14h16M4 18h16" />
-                </svg>
-              </button>
-              <button
-                onClick={() => setViewMode('grid')}
-                className={`px-3 py-1.5 rounded-md transition-colors ${
-                  viewMode === 'grid' 
-                    ? 'bg-primary text-white' 
-                    : 'text-text-muted hover:text-text'
-                }`}
-                title="Grid View"
-              >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
-                </svg>
-              </button>
-              <button
-                onClick={() => setViewMode('kanban')}
-                className={`px-3 py-1.5 rounded-md transition-colors ${
-                  viewMode === 'kanban' 
-                    ? 'bg-primary text-white' 
-                    : 'text-text-muted hover:text-text'
-                }`}
-                title="Kanban View"
-              >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7m0 10a2 2 0 002 2h2a2 2 0 002-2V7a2 2 0 00-2-2h-2a2 2 0 00-2 2" />
-                </svg>
-              </button>
-            </div>
-            <Button variant="ghost" onClick={fetchData}>
-              Refresh
-            </Button>
-          </div>
+          <OrderListActions
+            isBulkMode={isBulkMode}
+            onBulkModeToggle={() => {
+              setIsBulkMode(!isBulkMode);
+              setSelectedOrderIds(new Set());
+            }}
+            onFilterClick={() => setIsFilterOpen(true)}
+            onCreateOrder={() => navigate('/orders/create')}
+            onRefresh={fetchData}
+            viewMode={viewMode}
+            onViewModeChange={setViewMode}
+            activeFilterCount={getActiveFilterCount()}
+            showStaleIndicator={!!ordersCacheStatus}
+            staleIndicator={ordersCacheStatus && <StaleDataIndicator cacheStatus={ordersCacheStatus} />}
+          />
         }
       />
 
@@ -401,6 +346,7 @@ const OrderListPage = () => {
                   <th className="px-4 py-3 text-left text-xs font-medium text-text-muted uppercase">Customer</th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-text-muted uppercase">Amount</th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-text-muted uppercase">Status</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-text-muted uppercase">Payment</th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-text-muted uppercase">Date</th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-text-muted uppercase">Actions</th>
                 </tr>
@@ -431,6 +377,22 @@ const OrderListPage = () => {
                       <Badge variant={getStatusVariant(order.status) as any}>
                         {formatStatus(order.status)}
                       </Badge>
+                    </td>
+                    <td className="px-2 sm:px-4 py-3 sm:py-4">
+                      <div className="flex items-center justify-start min-w-[120px]">
+                        {user?.role === 'admin' ? (
+                          <PaymentStatusDropdown
+                            orderId={order.id}
+                            currentStatus={(order.payment_status || 'unpaid') as PaymentStatus}
+                            onStatusChange={refreshOrders}
+                          />
+                        ) : (
+                          <PaymentStatusBadge 
+                            status={(order.payment_status || 'unpaid') as PaymentStatus}
+                            size="sm"
+                          />
+                        )}
+                      </div>
                     </td>
                     <td className="px-4 py-4 whitespace-nowrap text-sm text-text-muted">
                       {formatDate(order.created_at)}

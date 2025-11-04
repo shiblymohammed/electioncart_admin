@@ -13,6 +13,11 @@ import LoadingSpinner from '../components/ui/LoadingSpinner';
 import Button from '../components/ui/Button';
 import { formatDate, formatCurrency, formatStatus } from '../utils/formatters';
 import { downloadInvoice } from '../services/invoiceService';
+import OrderStatusDropdown from '../components/OrderStatusDropdown';
+import PaymentStatusDropdown from '../components/PaymentStatusDropdown';
+import PaymentStatusBadge from '../components/PaymentStatusBadge';
+import OrderStatusHistory from '../components/OrderStatusHistory';
+import { OrderStatus, PaymentStatus } from '../types/manualOrder';
 
 const OrderDetailPage = () => {
   const { id } = useParams<{ id: string }>();
@@ -501,24 +506,92 @@ const OrderDetailPage = () => {
           <Card>
             <h3 className="text-lg font-semibold text-text mb-4">Order Summary</h3>
             <div className="space-y-3">
-              <div className="flex justify-between">
+              <div className="flex justify-between items-center">
                 <span className="text-text-muted">Status:</span>
-                <Badge variant={getStatusVariant(order.status) as any}>
-                  {formatStatus(order.status)}
-                </Badge>
+                {user?.role === 'admin' ? (
+                  <OrderStatusDropdown
+                    orderId={order.id}
+                    currentStatus={order.status as OrderStatus}
+                    onStatusChange={() => fetchOrderDetail(order.id)}
+                  />
+                ) : (
+                  <Badge variant={getStatusVariant(order.status) as any}>
+                    {formatStatus(order.status)}
+                  </Badge>
+                )}
               </div>
+              
+              {/* Manual Order Badge */}
+              {(order as any).is_manual_order && (
+                <div className="flex justify-between items-center">
+                  <span className="text-text-muted">Order Type:</span>
+                  <Badge variant="info">Manual Order</Badge>
+                </div>
+              )}
+              
+              {/* Order Source */}
+              {(order as any).order_source && (order as any).order_source !== 'website' && (
+                <div className="flex justify-between items-center">
+                  <span className="text-text-muted">Source:</span>
+                  <span className="text-text font-medium capitalize">
+                    {(order as any).order_source.replace('_', ' ')}
+                  </span>
+                </div>
+              )}
+              
+              {/* Priority */}
+              {(order as any).priority && (order as any).priority !== 'normal' && (
+                <div className="flex justify-between items-center">
+                  <span className="text-text-muted">Priority:</span>
+                  <Badge variant={(order as any).priority === 'urgent' || (order as any).priority === 'high' ? 'warning' : 'default'}>
+                    {(order as any).priority.toUpperCase()}
+                  </Badge>
+                </div>
+              )}
+              
               <div className="flex justify-between">
                 <span className="text-text-muted">Total Amount:</span>
                 <span className="text-text font-bold text-xl">{formatCurrency(order.total_amount)}</span>
               </div>
-              <div className="flex justify-between">
-                <span className="text-text-muted">Payment Status:</span>
-                <Badge variant={(order as any).payment_status === 'paid' ? 'success' : 'warning'}>
-                  {(order as any).payment_status || 'pending'}
-                </Badge>
+              
+              {/* Payment Info for Manual Orders */}
+              {(order as any).total_paid !== undefined && (
+                <>
+                  <div className="flex justify-between">
+                    <span className="text-text-muted">Total Paid:</span>
+                    <span className="text-success font-semibold">{formatCurrency((order as any).total_paid)}</span>
+                  </div>
+                  {(order as any).balance_due > 0 && (
+                    <div className="flex justify-between">
+                      <span className="text-text-muted">Balance Due:</span>
+                      <span className="text-warning font-semibold">{formatCurrency((order as any).balance_due)}</span>
+                    </div>
+                  )}
+                </>
+              )}
+              
+              <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2">
+                <span className="text-text-muted text-mobile-sm sm:text-sm">Payment Status:</span>
+                {user?.role === 'admin' ? (
+                  <PaymentStatusDropdown
+                    orderId={order.id}
+                    currentStatus={((order as any).payment_status || 'unpaid') as PaymentStatus}
+                    onStatusChange={() => fetchOrderDetail(order.id)}
+                  />
+                ) : (
+                  <PaymentStatusBadge 
+                    status={((order as any).payment_status || 'unpaid') as PaymentStatus}
+                    size="md"
+                  />
+                )}
               </div>
             </div>
           </Card>
+          
+          {/* Status History */}
+          {(order as any).status_history && (order as any).status_history.length > 0 && (
+            <OrderStatusHistory history={(order as any).status_history} />
+          )}
 
           {/* Assigned Staff */}
           {order.assigned_to && (

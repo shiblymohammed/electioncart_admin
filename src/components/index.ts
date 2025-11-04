@@ -17,3 +17,9 @@ export { default as RevenueChart } from './RevenueChart';
 export { default as TopProductsTable } from './TopProductsTable';
 export { default as StaffPerformanceTable } from './StaffPerformanceTable';
 export { default as PWAInstallPrompt } from './PWAInstallPrompt';
+
+// Manual Order & Status Management Components
+export { default as OrderStatusDropdown } from './OrderStatusDropdown';
+export { default as PaymentStatusDropdown } from './PaymentStatusDropdown';
+export { default as PaymentStatusBadge } from './PaymentStatusBadge';
+export { default as OrderStatusHistory } from './OrderStatusHistory';

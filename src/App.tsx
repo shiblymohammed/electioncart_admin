@@ -9,6 +9,7 @@ import MobileOptimizedLayout from './components/layout/MobileOptimizedLayout';
 import LoginPage from './pages/LoginPage';
 import OrderListPage from './pages/OrderListPage';
 import OrderDetailPage from './pages/OrderDetailPage';
+import CreateManualOrderPage from './pages/CreateManualOrderPage';
 import StaffAssignmentPage from './pages/StaffAssignmentPage';
 import StaffListPage from './pages/StaffListPage';
 import UserManagementPage from './pages/UserManagementPage';
@@ -43,6 +44,14 @@ function App() {
             element={
               <ProtectedRoute>
                 <OrderListPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/orders/create"
+            element={
+              <ProtectedRoute>
+                <CreateManualOrderPage />
               </ProtectedRoute>
             }
           />
