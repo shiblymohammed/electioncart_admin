@@ -273,19 +273,11 @@ export default defineConfig({
     sourcemap: false,
     rollupOptions: {
       output: {
-        manualChunks: (id) => {
-          if (id.includes('node_modules')) {
-            if (id.includes('react') || id.includes('react-dom') || id.includes('react-router')) {
-              return 'react-vendor';
-            }
-            if (id.includes('firebase')) {
-              return 'firebase-vendor';
-            }
-            if (id.includes('recharts') || id.includes('d3-')) {
-              return 'chart-vendor';
-            }
-            return 'vendor';
-          }
+        manualChunks: {
+          // Keep all React-related packages together to prevent hook issues
+          'react-vendor': ['react', 'react-dom', 'react-router-dom'],
+          // Separate chart library
+          'chart-vendor': ['recharts']
         }
       }
     }
